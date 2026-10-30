@@ -2033,140 +2033,11 @@ window.EverDeeperV2 = (function() {
 
   // --- INTERACTIVE SKILL TREE RENDERER (UPGRADED 3 SUBCLASSES & BENTO BOX) ---
   function renderSkillTree() {
-    const container = document.getElementById('skillTreeContainer');
-    const badge = document.getElementById('skillPointsBadge');
-    if (!container) return;
-
-    if (badge) {
-      badge.innerHTML = `${GameIcons.svg('spark', 'fantasy-icon icon-xs')} ${inventory.skillPoints || 0} Poin Skill Tersedia`;
-    }
-
-    container.innerHTML = '';
-    const tree = RPG_DATA.SKILL_TREES && RPG_DATA.SKILL_TREES[inventory.heroClassId];
-    if (!tree) {
-      container.innerHTML = '<div style="color:#a68d91; padding:20px;">Skill Tree belum tersedia untuk kelas ini.</div>';
-      return;
-    }
-
-    const branches = Object.values(tree).filter(Boolean);
-    const activeSubclass = inventory.getEffectiveSubclass ? inventory.getEffectiveSubclass() : null;
-
-    branches.forEach(branch => {
-      const bEl = document.createElement('div');
-      bEl.className = 'skill-tree-branch';
-      bEl.style.borderColor = branch.color ? `${branch.color}55` : '#3d242d';
-
-      const isCurrentActive = activeSubclass && activeSubclass.id === branch.id;
-
-      bEl.innerHTML = `
-        <div class="skill-tree-branch-header">
-          <div class="branch-icon-box" style="background:${branch.color}22; border:1px solid ${branch.color}; color:${branch.color};">
-            ${GameIcons.svg(branch.icon, 'fantasy-icon icon-md')}
-          </div>
-          <div style="flex:1;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
-              <div class="branch-title-text" style="color:${branch.color || '#fff'}; font-size:13.5px;">${branch.name}</div>
-              ${isCurrentActive ? `<span class="subclass-active-badge">SUBCLASS AKTIF</span>` : ''}
-            </div>
-            <div class="branch-subtitle-text">${branch.subclassName || 'Spesialisasi'} • 4 Tingkatan</div>
-          </div>
-        </div>
-
-        ${branch.mechanic ? `
-          <div class="subclass-mechanic-card" style="border-left-color: ${branch.color || '#eab308'}; padding:8px 12px; margin-bottom:10px;">
-            <div class="smc-header" style="margin-bottom:2px;">
-              <span class="smc-badge" style="background:${branch.color}25; color:${branch.color};">MEKANIK SUBCLASS</span>
-              <span class="smc-title" style="font-size:12.5px;">${branch.mechanic.name}</span>
-            </div>
-            <div class="smc-desc" style="font-size:11px; line-height:1.4; color:#d1c2c5;">${branch.mechanic.desc}</div>
-          </div>
-        ` : ''}
-
-        <div class="skill-tree-nodes-list" id="nodes_${branch.id}"></div>
-      `;
-
-      const nodesList = bEl.querySelector(`#nodes_${branch.id}`);
-
-      branch.nodes.forEach(node => {
-        const isMastered = inventory.unlockedNodes.includes(node.id);
-        const canUnlock = inventory.canUnlockNode(node.id);
-        const isLocked = !isMastered && !canUnlock;
-
-        let reqNodeName = '';
-        if (node.req) {
-          const reqNode = inventory.findSkillNode(node.req);
-          if (reqNode) reqNodeName = reqNode.name.split(' (')[0];
-        }
-
-        const nodeCard = document.createElement('div');
-        nodeCard.className = `skill-tree-node bento-node ${isMastered ? 'node-mastered' : (canUnlock ? 'node-available' : 'node-locked')}`;
-
-        nodeCard.innerHTML = `
-          <div class="skill-node-header">
-            <span class="node-tier-pill">Tier ${node.tier}</span>
-            <span class="node-type-pill ${node.type === 'passive' ? 'passive-type' : ''}">${node.type === 'passive' ? 'PASIF' : (node.slotIdx !== undefined ? `AKTIF Slot ${node.slotIdx + 1}` : 'AKTIF')}</span>
-            <span style="font-size:10px; color:#facc15; font-family:var(--font-mono); font-weight:bold;">${node.cost || 1} SP</span>
-          </div>
-          <div class="skill-node-title-row" style="margin:4px 0 6px;">
-            <span class="skill-node-icon" style="font-size:20px;">${GameIcons.svg(node.icon, 'fantasy-icon icon-sm')}</span>
-            <div style="flex:1; min-width:0;">
-              <div class="skill-node-title" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${node.name}</div>
-              <div style="font-size:10px; color:#a68d91; font-family:var(--font-mono);">${node.type === 'passive' ? 'Efek Penguat Pasif' : (node.cd ? `CD: ${node.cd} turn` : 'Skill Serangan')}</div>
-            </div>
-          </div>
-          <div class="skill-node-actions">
-            <div>
-              ${isLocked && reqNodeName ? `<span style="font-size:10px; color:#f87171;">(Butuh: ${reqNodeName})</span>` : '<span style="font-size:10px; color:#a68d91;">Arahkan kursor</span>'}
-            </div>
-            <div>
-              ${isMastered ? `
-                <div class="node-status-badge mastered">✓ Dikuasai</div>
-              ` : canUnlock ? `
-                <button class="node-unlock-btn" id="btn_unlock_${node.id}">Buka (1 SP)</button>
-              ` : `
-                <div class="node-status-badge locked"><span data-icon="lock"></span> Terkunci</div>
-              `}
-            </div>
-          </div>
-        `;
-
-        nodeCard.onmouseenter = (e) => showTreeSkillTooltip(e, node, branch);
-        nodeCard.onmousemove = (e) => positionBentoTooltip(e);
-        nodeCard.onmouseleave = () => hideBentoTooltip();
-
-        if (canUnlock) {
-          const unlockBtn = nodeCard.querySelector(`#btn_unlock_${node.id}`);
-          if (unlockBtn) {
-            unlockBtn.onclick = () => {
-              hideBentoTooltip();
-              const ok = inventory.unlockSkillNode(node.id);
-              if (ok) {
-                GameAudio.playHeal();
-                showNotification(`${GameIcons.svg('lightning')} Berhasil membuka node: ${node.name}!`);
-                renderSkillTree();
-                renderSkillButtons();
-                const stats = inventory.getComputedStats();
-                document.getElementById('charDetails').innerHTML = `
-                  <div>Max HP: <b>${stats.maxHp}</b> | Max Poise: <b>${stats.maxPoise}</b></div>
-                  <div>ATK: <b>${stats.atk}</b> | DEF: <b>${stats.def}</b></div>
-                  <div>Critical Chance: <b>${Math.round(stats.critChance * 100)}%</b> | Movement: <b>${stats.moveRange} petak</b></div>
-                `;
-                if (combat && combat.isActive) {
-                  combat.updateCombatUI();
-                }
-              }
-            };
-          }
-        }
-
-        nodesList.appendChild(nodeCard);
-      });
-
-      container.appendChild(bEl);
-    });
+    SkillTreeUI.render(inventory,{inCombat:!!combat?.isActive,refresh:()=>{renderSkillButtons();updateHUD();}});
   }
 
   function onResetSkillTreeClicked() {
+    if(combat?.isActive){showNotification('Reset skill tersedia setelah combat.');return;}
     hideBentoTooltip();
     if (!inventory.unlockedNodes || inventory.unlockedNodes.length === 0) {
       showNotification(`${GameIcons.svg('warning')} Belum ada node Skill Tree yang dibuka!`);
@@ -2651,6 +2522,7 @@ window.EverDeeperV2 = (function() {
     } else {
       results.loot.forEach(l => {
         const li = document.createElement('li');
+        li.className = 'loot-rarity rarity-' + (l.rarity || 'common');
         li.style.display = 'flex';
         li.style.alignItems = 'center';
         li.style.gap = '6px';

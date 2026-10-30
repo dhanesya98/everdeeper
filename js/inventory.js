@@ -26,7 +26,8 @@ window.GameInventory = (function() {
       this.chosenBuild = 'buildA';
       this.passives = [];
       this.skillPoints = 2; // Start with 2 Skill Points to customize initial build
-      this.unlockedNodes = []; // Unlocked Skill Tree node IDs
+      this.unlockedNodes = [];
+      this.skillLoadout = {}; // Unlocked Skill Tree node IDs
       this.boons = []; // Level-up blessing cards
       this.forgeLevel = 0; // Blacksmith weapon tempering level
       this.floorShops = {}; // Per-floor shop stock cache
@@ -57,6 +58,7 @@ window.GameInventory = (function() {
       this.passives = [];
       this.skillPoints = 2;
       this.unlockedNodes = [];
+      this.skillLoadout = {};
       this.boons = [];
       this.forgeLevel = 0;
       this.floorShops = {};
@@ -129,9 +131,10 @@ window.GameInventory = (function() {
     }
 
     resetSkillTree() {
-      const spent = this.unlockedNodes.length;
+      const spent = this.unlockedNodes.reduce((sum,id)=>sum+(this.findSkillNode(id)?.cost||1),0);
       this.skillPoints += spent;
       this.unlockedNodes = [];
+      this.skillLoadout = {};
       this.initBuild();
       this.saveToStorage();
       return true;
@@ -572,6 +575,7 @@ window.GameInventory = (function() {
           passives: this.passives,
           skillPoints: this.skillPoints,
           unlockedNodes: this.unlockedNodes,
+          skillLoadout: this.skillLoadout || {},
           boons: this.boons,
           level: this.level,
           exp: this.exp,
@@ -605,7 +609,16 @@ window.GameInventory = (function() {
         this.chosenBuild = data.chosenBuild || 'buildA';
         this.passives = data.passives || [];
         this.skillPoints = data.skillPoints !== undefined ? data.skillPoints : 2;
-        this.unlockedNodes = data.unlockedNodes || [];
+        this.unlockedNodes = [...new Set(data.unlockedNodes || [])];
+        this.skillLoadout = {};
+        if (data.skillLoadout && typeof data.skillLoadout === 'object') {
+          for (const [slot,id] of Object.entries(data.skillLoadout)) {
+            const n=this.findSkillNode(id);if(n?.type==='active'&&n.slotIdx===Number(slot)&&this.unlockedNodes.includes(id))this.skillLoadout[slot]=id;
+          }
+        } else {
+          // Preserve precisely the old tree-order hotbar, with every purchase retained.
+          for(const branch of Object.values(RPG_DATA.SKILL_TREES[this.heroClassId]||{}))for(const n of branch.nodes)if(n.type==='active'&&this.unlockedNodes.includes(n.id))this.skillLoadout[n.slotIdx]=n.id;
+        }
         this.boons = data.boons || [];
         this.level = data.level || 1;
         this.exp = data.exp || 0;

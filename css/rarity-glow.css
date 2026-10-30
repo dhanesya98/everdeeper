@@ -1,0 +1,11 @@
+/* Static, bounded shadows: rarity is visible without an animation/render loop. */
+.rarity-common{--rarity-edge:#777;--rarity-glow:#aaaaaa20;--rarity-blur:2px;--rarity-spread:0px}
+.rarity-uncommon{--rarity-edge:#a7b6c7;--rarity-glow:#a7b6c740;--rarity-blur:4px;--rarity-spread:0px}
+.rarity-rare{--rarity-edge:#77adfa;--rarity-glow:#609ef866;--rarity-blur:7px;--rarity-spread:0px}
+.rarity-epic{--rarity-edge:#c395ff;--rarity-glow:#ae69ff88;--rarity-blur:10px;--rarity-spread:1px}
+.rarity-legendary{--rarity-edge:#ffd285;--rarity-glow:#ffb747aa;--rarity-blur:14px;--rarity-spread:1px}
+.rarity-mythic{--rarity-edge:#ffb4ac;--rarity-glow:#ff544cbb;--rarity-blur:18px;--rarity-spread:2px}
+.modal-overlay .modal-window :is(.equip-slot,.bag-item-card,.loot-rarity,.forge-slot-pill,.forge-bench-card)[class*="rarity-"]{border:1px solid var(--rarity-edge,#777)!important;box-shadow:0 0 var(--rarity-blur,2px) var(--rarity-spread,0px) var(--rarity-glow,#aaaaaa20),inset 0 0 5px var(--rarity-glow,#aaaaaa20)!important;animation:none!important}
+.modal-overlay .modal-window :is(.equip-slot,.bag-item-card,.loot-rarity)[class*="rarity-"] .rarity-pill{color:var(--rarity-edge)!important;border-color:var(--rarity-edge)!important;background:#171111!important}
+.loot-rarity{padding:10px 12px;margin:10px 3px!important;list-style:none}
+.modal-overlay .modal-window .bag-grid{gap:18px;padding:4px}

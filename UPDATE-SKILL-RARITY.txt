@@ -1,0 +1,40 @@
+SKILL TREE EMPAT KELAS + RARITY BORDER
+
+- Berlaku pada Vanguard, Arcanist, Skirmisher, dan Ranger: 48 node.
+- Membeli skill tidak otomatis mengganti hotbar. Pilih Pasang, periksa
+  skill lama dan baru, lalu Ganti Skill. Skill dasar dapat dipulihkan.
+- Skill aktif tetap memakai slot yang sesuai dengan jenisnya.
+- Semua pasif yang dibuka aktif; investasi lintas jalur disebut Build Campuran.
+- Status Dimiliki, Terpasang, Pasif Aktif, dan syarat membuka ditampilkan.
+- Detail dapat dibuka dengan klik/keyboard, bukan hanya hover.
+- Header poin skill tetap terlihat saat scroll; layout satu kolom di layar sempit.
+- Pembelian, pemasangan dan reset dikunci selama combat.
+- Save lama dimigrasi: semua pembelian/SP dipertahankan, hotbar mengikuti
+  susunan terakhir menurut aturan lama. Skill tertimpa tetap ada di koleksi.
+- Reset mengembalikan biaya SP node dan membersihkan susunan skill.
+
+MEKANIK
+- Riposte memakai pasif pemain yang bertahan saat dodge.
+- Gale Agility Ranger kembali memberi AP/cooldown saat dodge.
+- Chain: skill berbeda +1; ulang skill memutus Chain; pada 4 stack Finale
+  memotong cooldown sekali dan menghabiskan stack.
+- Vanish dijelaskan sebagai dodge maksimal 60%, bukan kebal target.
+- Melt membaca elemen sebelumnya untuk pengurangan DEF.
+- Deskripsi mekanik seluruh 12 jalur diselaraskan dengan aturan combat.
+
+RARITY
+- Common abu redup; uncommon abu kebiruan; rare biru; epic ungu;
+  legendary emas; mythic merah dengan cahaya terkuat.
+- Border bercahaya pada equipment, tas, toko, hasil loot, dan meja tempa.
+- Efek CSS statis: tidak menambah tekstur, lampu 3D, atau animasi kontinu.
+
+VALIDASI
+- 48 node / 24 skill aktif: unlock, pemasangan, migrasi, save/load,
+  pemulihan skill dasar dan refund reset lolos untuk empat kelas.
+- Render menu empat kelas di browser: 12 node / 5 slot setiap kelas,
+  tanpa error JavaScript.
+- Uji Chain dan bonus dodge Duelist/Ranger lolos.
+- Border enam rarity diverifikasi di browser (warna, intensitas, tanpa animasi).
+
+Paket lengkap termasuk balancing dan cerita 8 bab sebelumnya.
+Ekstrak isi ZIP ke folder game, Replace, lalu Ctrl+F5.

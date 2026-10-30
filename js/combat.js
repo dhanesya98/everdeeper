@@ -1040,17 +1040,19 @@ window.GameCombat = (function() {
 
       const passives = attacker.isPlayer ? ((this.inventory && this.inventory.passives) || []) : [];
       const boons = attacker.isPlayer ? ((this.inventory && this.inventory.boons) || []) : [];
+      const defenderPassives = target.isPlayer ? (this.inventory.passives || []) : [];
+      const previousElement = target.lastElementHit;
 
       // Check Dodge on Target
       if (target.buffs && target.buffs.dodge && Math.random() < target.buffs.dodge) {
         this.showFloatingText(target, 'DODGE! (Lolos)', 0x38bdf8);
         this.logCombat(`${target.name} berhasil menghindar (Dodge) dari serangan ${skill.name}!`, 'shield');
         GameAudio.playSlash();
-        if (target.isPlayer && passives.includes('riposte_stance')) {
+        if (target.isPlayer && defenderPassives.includes('riposte_stance')) {
           target.riposteTokens = Math.min(3, (target.riposteTokens || 0) + 1);
           this.showFloatingText(target, `+1 Riposte (${target.riposteTokens}/3)`, 0x38bdf8);
         }
-        if (target.isPlayer && passives.includes('gale_agility')) {
+        if (target.isPlayer && defenderPassives.includes('gale_agility')) {
           target.ap = Math.min(target.maxAp, target.ap + 1);
           for (let sk in target.cooldowns) {
             if (target.cooldowns[sk] > 0) target.cooldowns[sk]--;
@@ -1200,6 +1202,7 @@ window.GameCombat = (function() {
           }
         }
         if (currElem) {
+          skill.element = currElem;
           target.lastElementHit = currElem;
         }
       }
@@ -1236,7 +1239,7 @@ window.GameCombat = (function() {
       // 7. Rogue: Bladedancer (Combo Chain)
       if (attacker.isPlayer && passives.includes('chain_flow')) {
         if (attacker.lastSkillId !== skill.id) {
-          const cGain = skill.chainGain || 1;
+          const cGain = 1;
           attacker.chainCount = Math.min(4, (attacker.chainCount || 0) + cGain);
           mult *= (1 + (attacker.chainCount * 0.15));
           this.showFloatingText(attacker, `COMBO CHAIN x${attacker.chainCount} (+${attacker.chainCount * 15}% DMG)`, 0xf59e0b);
@@ -1248,10 +1251,12 @@ window.GameCombat = (function() {
             if (passives.includes('adrenaline_chain')) {
               critChance += 0.08;
             }
+            attacker.chainCount = 0;
             this.showFloatingText(attacker, 'FINALE! COOLDOWN -1', 0xf59e0b);
             GameAudio.playMagicBeam();
           }
         }
+        if (attacker.lastSkillId === skill.id) attacker.chainCount = 0;
         attacker.lastSkillId = skill.id;
       }
 
@@ -1309,7 +1314,7 @@ window.GameCombat = (function() {
         targetDef = Math.max(0, targetDef - (target.corruptionStacks * 5));
       }
       // Melt Reaction DEF shred
-      if (target.lastElementHit === 'ice' && skill.element === 'fire') {
+      if (previousElement === 'ice' && skill.element === 'fire') {
         targetDef = Math.round(targetDef * 0.5);
       }
       // Crippling Venom DEF shred
@@ -1982,7 +1987,7 @@ window.GameCombat = (function() {
         const passives = (this.inventory && this.inventory.passives) || [];
 
         if (passives.includes('tactical_command') && (hero.commandStacks || 0) > 0) {
-          badgeHtml = `${GameIcons.svg('crown', 'fantasy-icon icon-xs')} <span>COMMAND x${hero.commandStacks} (+${hero.commandStacks * 5}% DMG, +${hero.commandStacks * 4} DEF)</span>`;
+          badgeHtml = `${GameIcons.svg('crown', 'fantasy-icon icon-xs')} <span>COMMAND x${hero.commandStacks} (+${hero.commandStacks * 5}% DMG)</span>`;
           badgeColor = '#eab308';
         } else if (passives.includes('blood_frenzy') && ((hero.rageStacks || 0) > 0 || hero.hp < hero.maxHp * 0.5)) {
           if (hero.hp < hero.maxHp * 0.5) {

@@ -1,0 +1,23 @@
+#characterModal .modal-header{position:sticky!important;top:0!important;z-index:10;background:#100d0d!important;padding:12px!important;flex-wrap:wrap;gap:8px;border-bottom:1px solid #887b76}
+#skillTreeContainer.loadout-tree{display:block!important;overflow:visible!important;max-height:none!important;padding:0!important}
+.tree-loadout-summary{padding:16px;background:#151111;border:1px solid #746563;margin-bottom:18px}
+.tree-loadout-summary h3,.tree-branch h3{font:600 16px/1.5 'Segoe UI',sans-serif!important;color:#eee!important;margin:0 0 8px}
+.tree-loadout-summary p,.tree-node p,.tree-mechanic p,.tree-passives p{font:13px/1.6 'Segoe UI',sans-serif!important;color:#d1c8c8!important;margin:8px 0}
+.tree-loadout-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.tree-slot{border:1px solid #584a4a;padding:10px;display:flex;flex-direction:column;gap:8px;background:#090808}
+.tree-slot strong{font:600 13px/1.5 'Segoe UI',sans-serif}
+.tree-slot small,.tree-node small{font:11px/1.5 'Segoe UI',sans-serif;color:#b5aaaa}
+.tree-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.tree-branch{min-width:0;background:#100e0e;padding:14px;border:1px solid #665959}
+.tree-node{margin-top:14px;padding:13px;border:1px solid #504444;background:#171212}
+.tree-node.owned{border-color:#9c8580;background:#241919}
+.tree-node.available{border-color:#a5453d}
+.tree-node.locked{background:#121010}
+.tree-node h4{font:600 14px/1.5 'Segoe UI',sans-serif;color:#eee;margin:9px 0;overflow-wrap:anywhere}
+.tree-action{font:600 12px/1.5 'Segoe UI',sans-serif!important;white-space:normal!important;cursor:pointer;background:#55231f!important;color:#eee!important;border:1px solid #a56860!important;padding:8px 10px!important;margin:5px 5px 0 0}
+.tree-action:disabled{opacity:.45;cursor:not-allowed}
+.tree-state{display:block;font:600 11px/1.5 'Segoe UI',sans-serif;color:#d9b5af;margin:10px 0}
+.tree-detail summary,.tree-mechanic summary,.tree-passives summary{font:13px/1.6 'Segoe UI',sans-serif;color:#ddd;cursor:pointer;padding:7px 0;text-decoration:underline;text-underline-offset:3px}
+.tree-confirm{background:#090707;border:1px solid #ae5148;padding:10px;margin-top:10px}
+.tree-rule{border-top:1px solid #564343;padding-top:8px}
+@media(max-width:850px){.tree-branches{grid-template-columns:1fr}.tree-loadout-slots{grid-template-columns:repeat(2,minmax(0,1fr))}#characterModal .modal-header h2{font-size:15px!important}}

@@ -1,0 +1,16 @@
+EFEK SERANG FPS
+
+Vanguard: ayunan tangan dan jejak tebasan pedang.
+Skirmisher: tusukan cepat dengan dua jejak belati.
+Arcanist: proyektil sihir dari arah tangan menuju musuh.
+Ranger: animasi pelepasan busur, panah, dan jejak lintasan.
+Serangan menampilkan serpihan benturan singkat pada target.
+Skill diri sendiri memakai pulsa efek, bukan benturan ke musuh.
+
+Efek hanya dipicu jika aksi skill berhasil. Satu kanvas beresolusi terbatas
+dipakai bersama, maksimal empat efek serang aktif, tanpa lampu tambahan.
+Pilihan pengurangan animasi menonaktifkan gerak tangan dan lintasan panjang.
+
+Paket ini juga memuat gambar pose tangan baru yang utuh untuk empat kelas,
+perbaikan jarak tangan, POV FPS permanen, menu gothic, dan efek kematian.
+Ekstrak seluruh isi ZIP ke folder game, Replace, lalu Ctrl+F5.

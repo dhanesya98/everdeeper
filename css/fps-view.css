@@ -1,0 +1,17 @@
+#fpsHands{position:fixed;z-index:8;pointer-events:none;left:50%;bottom:-12px;width:min(1100px,100vw);aspect-ratio:1;background-image:url('../assets/fps-hands.webp');background-size:200% 200%;background-repeat:no-repeat;image-rendering:pixelated;transform-origin:50% 90%;filter:brightness(.76);will-change:transform}
+#fpsHands[hidden]{display:none!important}body[data-view="combat-first-person"] #retroCrosshair{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);color:#bbb;font:16px monospace;opacity:.45;pointer-events:none;z-index:12}body[data-view="combat-first-person"] #retroMode{display:none}
+body[data-view="combat-first-person"] .combat-bottom-bar{right:30px!important;bottom:155px!important;width:270px!important;z-index:25!important;text-shadow:1px 1px 3px #000,0 0 6px #000}body[data-view="combat-first-person"] .skills-container{background:#0008!important;padding:12px!important}body[data-view="combat-first-person"] .turn-actions{background:#0008!important;padding:8px 12px!important}body[data-view="combat-first-person"] .player-vital-card{bottom:20px!important;left:22px!important;background:#0009!important;padding:8px!important}
+@media(max-width:700px){#fpsHands{width:110vw;bottom:0}body[data-view="combat-first-person"] .combat-bottom-bar{right:10px!important;bottom:90px!important;width:215px!important}body[data-view="combat-first-person"] .player-vital-card{left:8px!important;bottom:8px!important;width:125px!important}}
+/* Separate left/right halves preserve hand proportions on wide screens. */
+#fpsHands{width:100vw;height:min(80vh,600px);aspect-ratio:auto;background:none;bottom:-10px}
+#fpsHands>span{position:absolute;bottom:0;height:100%;aspect-ratio:1/2;background-image:url('../assets/fps-hands.webp');background-size:400% 200%;background-repeat:no-repeat;image-rendering:pixelated}
+.fps-hand-left{left:0}.fps-hand-right{right:0}
+body[data-view="combat-first-person"] .combat-bottom-bar{left:calc(50% - 140px)!important;right:auto!important;transform:none!important;bottom:30px!important;width:280px!important}
+@media(max-width:700px){#fpsHands{height:57vh}body[data-view="combat-first-person"] .combat-bottom-bar{left:auto!important;right:12px!important;transform:none!important;bottom:110px!important;width:210px!important}}
+/* Anchor both arms to the player's body, rather than the monitor edges. */
+#fpsHands{width:min(900px,90vw);height:min(72vh,560px)}
+#fpsHands[data-class="rogue"]{width:min(760px,86vw)}
+#fpsHands[data-class="rogue"]>span,#fpsHands[data-class="archer"]>span{mask-image:linear-gradient(to bottom,transparent 0%,transparent 9%,#000 11%,#000 100%)}
+@media(max-width:700px){#fpsHands,#fpsHands[data-class="rogue"]{width:90vw;height:min(52vh,400px)}}
+
+.floating-death{color:#e3d5c1!important;font:12px Silkscreen,monospace!important;letter-spacing:1px;text-shadow:2px 2px #000,0 0 6px #000!important;white-space:nowrap}

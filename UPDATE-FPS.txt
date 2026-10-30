@@ -1,0 +1,17 @@
+UPDATE POV FPS
+
+Eksplorasi dan combat sekarang sama-sama memakai kamera orang pertama.
+Tangan dan senjata selalu terlihat saat bermain, sesuai kelas:
+Vanguard: perisai dan pedang; Arcanist: tangan sihir dan tongkat;
+Skirmisher: dua belati; Ranger: busur dan panah.
+
+WASD: jelajah bebas saat eksplorasi; langkah satu petak memakai AP saat combat.
+Klik kanan + geser mouse: lihat kiri/kanan dan atas/bawah.
+Q / R: putar pandangan. Klik musuh: serang dengan skill yang dipilih.
+1–5: pilih skill; G: bertahan; 6: flask; Spasi: akhir giliran.
+Aturan AP, giliran, cooldown, jarak, dan collision tetap berlaku.
+Menu Tampilan: matikan animasi untuk mengurangi gerakan tangan.
+
+Ekstrak seluruh isi ZIP ke folder game, Replace, lalu Ctrl+F5.
+Tangan menggunakan satu gambar pose WebP utuh per kelas, tanpa geometri atau lampu tambahan.
+Ilustrasi tangan asli dibuat dengan imagegen bawaan. Tidak perlu internet.

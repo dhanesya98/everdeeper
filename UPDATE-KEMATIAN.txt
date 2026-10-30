@@ -1,0 +1,14 @@
+EFEK KEMATIAN MUSUH
+
+Saat HP musuh habis: kilatan singkat pada tubuh, tulisan DIKALAHKAN,
+lalu tubuh memudar dan serpihan abu menghilang selama kurang lebih 0,9 detik.
+Musuh yang mati tidak tertinggal berdiri atau kembali aktif.
+Kemenangan ditampilkan setelah transisi kematian selesai.
+Mencakup serangan langsung, AoE, panah susulan, racun, kutukan,
+ledakan, dan serangan balasan melalui pemeriksaan HP terpusat.
+
+Efek dibatasi 8 transisi bersamaan dengan 18 partikel per transisi,
+tanpa tekstur atau lampu baru. Dalam mode pengurangan animasi,
+tubuh memudar tanpa kilatan atau partikel.
+
+Ekstrak seluruh isi ZIP ke folder game, Replace, lalu Ctrl+F5.

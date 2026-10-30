@@ -1,0 +1,15 @@
+ANIMASI TANGAN SAAT BERJALAN
+
+Tangan dan senjata mengayun ke kiri/kanan, naik/turun mengikuti langkah,
+dengan sedikit kemiringan dan gerak mendekat/menjauh.
+Gerakan bertambah halus saat mulai berjalan dan mereda saat berhenti.
+Ritme mengikuti jarak perpindahan karakter; tertahan dinding tidak membuat
+tangan terus mengayun. Langkah combat mendapat hentakan kecil tersendiri.
+
+Vanguard terasa lebih berat, Skirmisher lebih lincah, sementara Arcanist
+dan Ranger lebih stabil. Efek serang tetap bisa berjalan bersama ayunan.
+Menu Tampilan > Animasi & getaran: matikan untuk menonaktifkan gerak ini.
+
+Implementasi memakai transformasi gambar yang sudah ada, tanpa model,
+tekstur, partikel, atau lampu tambahan.
+Ekstrak seluruh isi ZIP ke folder game, Replace, lalu Ctrl+F5.

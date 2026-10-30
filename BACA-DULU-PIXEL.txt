@@ -1,0 +1,46 @@
+EVER DEEPER II — DARK PIXEL OVERHAUL
+
+PEMASANGAN
+1. Tutup tab game lama.
+2. Ekstrak SELURUH ISI ZIP ke G:\My Drive\A2 - Game v2\
+   index.html, play.bat, css, js, dan assets harus berada di folder yang sama.
+3. Pilih Replace / Ganti file jika diminta.
+4. Jalankan play.bat. Jika tab lama masih terbuka, tekan Ctrl+F5.
+
+Jangan hanya mengekstrak ke akar G: karena itu tidak mengganti folder game.
+Paket ini lengkap dan juga dapat dijalankan dari folder baru.
+Save menggunakan penyimpanan browser; gunakan browser dan lokasi lama untuk
+peluang terbaik mempertahankan save. Jangan hapus data browser.
+
+KONTROL
+WASD / tombol panah: bergerak dan menggeser posisi.
+Q / R: putar pandangan; tahan klik kanan dan geser mouse untuk melihat sekitar.
+E: interaksi dengan NPC, peti, altar, dan tangga.
+M / tombol Peta: tampilkan peta area yang sudah dijelajahi.
+I: perlengkapan. C: karakter. 6: flask.
+Saat bertemu musuh, kamera tetap orang pertama; tangan dan senjata tetap terlihat.
+WASD saat combat: langkah satu petak menggunakan AP.
+Klik petak / target dan gunakan tombol skill 1–5; G bertahan; Spasi akhir giliran.
+Bestiari: lihat dua belas ilustrasi penghuni Abyss.
+
+PERUBAHAN
+Eksplorasi orang pertama, pertarungan taktis, atlas ilustrasi 4 hero,
+4 NPC, 12 monster/bos, kartu kelas, latar judul, font pixel lokal,
+tekstur batu, palet redup, dithering, UI, ikon monokrom, dan peta eksplorasi.
+Sprite menghadap kamera dengan anatomi humanoid/monster; bukan model kubus.
+Efek skill tetap memakai pool terbatas dan ikut dirender dalam gaya pixel.
+Bug duplikasi loot peti diperbaiki; geometri loot beam dilepas setelah efek selesai.
+
+PERFORMA
+Balanced: tinggi render maksimal 360 px; Lite: 240 px; lebar maksimal 720 px.
+UI tetap tajam pada resolusi layar. Dua atlas dipakai bersama; NPC hanya 2 segitiga.
+Tidak perlu internet, paket tambahan, atau GPU dengan ray tracing.
+Pilihan Tampilan menyediakan mode Ringan dan pengurangan animasi.
+Frame rate bergantung perangkat; tidak ada jaminan angka FPS tertentu.
+
+ASET
+Ilustrasi asli dibuat dengan alat imagegen bawaan, terinspirasi arah visual
+referensi pengguna, tanpa memakai logo atau sprite dari gambar referensi.
+Silkscreen oleh Jason Kottke dan kontributor: SIL Open Font License.
+Lisensi disertakan di assets/Silkscreen-OFL.txt.
+Sumber font: https://github.com/googlefonts/silkscreen

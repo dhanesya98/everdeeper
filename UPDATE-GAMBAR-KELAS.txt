@@ -1,0 +1,15 @@
+PERBAIKAN GAMBAR TANGAN SEMUA KELAS
+
+Sistem lama membagi gambar menjadi dua bagian lalu menggeser tangan kiri
+dan kanan secara terpisah. Senjata yang melintasi tengah gambar (terutama
+busur) menjadi terpotong dan tidak tersambung.
+
+Sekarang setiap kelas memakai satu gambar pose utuh. Rasio gambar dijaga
+dengan object-fit: contain. Bagian tengah senjata tidak dipotong atau dimask.
+Aset pose baru juga menyediakan ruang di sisi gambar agar kontur senjata
+tidak terpotong saat tangan dirapatkan.
+
+Vanguard, Arcanist, Skirmisher, dan Ranger telah diperiksa secara visual
+melalui pergantian kelas di dalam game. Semua gambar berhasil dimuat.
+
+Ekstrak seluruh isi ZIP ke folder game, Replace, lalu Ctrl+F5.

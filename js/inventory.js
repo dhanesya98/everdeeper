@@ -40,6 +40,9 @@ window.GameInventory = (function() {
     }
 
     reset(heroClassId) {
+      this.abyssContract = 0;
+      this.savedDepth = 0;
+      delete this.currentHp;
       this.heroClassId = heroClassId || 'warrior';
       this.level = 1;
       this.exp = 0;
@@ -255,10 +258,10 @@ window.GameInventory = (function() {
 
       // Blacksmith Forge Tempering Bonus
       if (this.forgeLevel > 0) {
-        stats.atk += this.forgeLevel * 5;
-        stats.maxHp += this.forgeLevel * 15;
-        stats.hp += this.forgeLevel * 15;
-        stats.def += this.forgeLevel * 2;
+        // Elixirs only increase HP, never ATK.
+        stats.maxHp += Math.min(5, this.forgeLevel) * 25;
+        stats.hp += Math.min(5, this.forgeLevel) * 25;
+        // Elixirs no longer grant DEF.
       }
 
       // Apply equipment stats and individual equipment tempering
@@ -417,6 +420,7 @@ window.GameInventory = (function() {
         if (this.pactBonuses.maxAp) stats.maxAp = Math.max(2, (stats.maxAp || 3) + this.pactBonuses.maxAp);
       }
 
+      stats.hp = Number.isFinite(this.currentHp) ? Math.max(0,Math.min(stats.maxHp,this.currentHp)) : stats.maxHp;
       return stats;
     }
 
@@ -563,6 +567,7 @@ window.GameInventory = (function() {
       try {
         const data = {
           heroClassId: this.heroClassId,
+          currentHp: Number.isFinite(this.currentHp)?this.currentHp:this.getComputedStats().maxHp,
           chosenBuild: this.chosenBuild,
           passives: this.passives,
           skillPoints: this.skillPoints,
@@ -574,6 +579,8 @@ window.GameInventory = (function() {
           gold: this.gold,
           potions: this.potions,
           forgeLevel: this.forgeLevel || 0,
+          abyssContract: this.abyssContract || 0,
+          savedDepth: this.savedDepth || 0,
           equipped: this.equipped,
           items: this.items,
           floorShops: this.floorShops || {},
@@ -605,7 +612,9 @@ window.GameInventory = (function() {
         this.expNext = data.expNext || 100;
         this.gold = data.gold || 50;
         this.potions = data.potions !== undefined ? data.potions : 3;
-        this.forgeLevel = data.forgeLevel || 0;
+        this.forgeLevel = Math.min(5, data.forgeLevel || 0);
+        this.abyssContract = data.abyssContract === 1 ? 1 : 0;
+        this.savedDepth = Math.max(0, Math.min(RPG_DATA.FLOORS.length-1, Math.floor(data.savedDepth || 0)));
         this.equipped = data.equipped || this.equipped;
         this.items = data.items || [];
         this.floorShops = data.floorShops || {};
@@ -613,6 +622,7 @@ window.GameInventory = (function() {
         this.activePacts = data.activePacts || [];
         this.isVulnerableNextCombat = !!data.isVulnerableNextCombat;
         this.bountiesCompleted = data.bountiesCompleted || [];
+        if(Number.isFinite(data.currentHp))this.currentHp=data.currentHp;else delete this.currentHp;
         this.initBuild();
         this.recalculateSets();
         return true;

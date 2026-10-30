@@ -211,6 +211,14 @@ window.GameDungeon = (function() {
           gz: isBountyRoom ? room.z + 2 : room.cz
         });
 
+        // Small squads combine roles without increasing arena or asset complexity.
+        if (this.floorData.floor >= 2 && !isBountyRoom) {
+          const companion = this.floorData.floor >= 3 && r % 2 === 0 ? 'choir_keeper' : 'bone_archer';
+          const gx = room.cx + 1, gz = room.cz;
+          if (this.isWalkable(gx, gz) && !this.entities.some(e=>e.gx===gx&&e.gz===gz)) {
+            this.entities.push({type:'monster',monsterKey:companion,gx,gz,isElite:false});
+          }
+        }
         // Spawn Destructible Urns / Pots in room corners
         const urnCount = Math.floor(Math.random() * 2) + 1;
         for (let u = 0; u < urnCount; u++) {

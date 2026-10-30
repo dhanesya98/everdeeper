@@ -1,0 +1,31 @@
+PERBAIKAN AUDIT UI DAN COMBAT
+
+HP
+- Vanguard baru mulai 135/135 di eksplorasi DAN combat.
+- Bonus HP perlengkapan tidak lagi membuat HP turun saat masuk combat.
+- HP tersimpan dan dimuat kembali; ganti kelas memulai HP kelas baru dengan benar.
+
+MENYERANG DAN TARGET
+- Kamera berputar halus menghadap musuh saat combat dimulai, tetap POV FPS.
+- Target aktif memiliki bracket dan label skill, biaya AP, serta kebutuhan maju.
+- Klik musuh/bracket atau F/Enter untuk menyerang target aktif.
+- Tab memilih target berikutnya sekaligus menghadapnya.
+- 1–5 memilih skill; jika hanya satu musuh dalam jangkauan, langsung menyerang.
+- Musuh di luar pandangan mendapat panah/nama di tepi layar; klik untuk melihatnya.
+- Banner menjelaskan giliran pemain/musuh dan cara menyerang.
+
+HUD
+- Hotbar bawah berbingkai gothic merah–abu berada di atas tangan.
+- HP dan AP di atas hotbar; Bertahan, Flask, dan Selesai dipisah di kanan.
+- Combo dijauhkan dari buronan; teks kecil diperbesar.
+- Prompt interaksi E dipindah ke tengah agak atas.
+- Legenda menjelaskan petak gerak dan area serang.
+
+LAINNYA
+- Kompas memiliki delapan arah; Q/R berputar 90 derajat.
+- Prasasti kuning polos diganti ukiran, pita merah diredupkan.
+- Halaman awal menjelaskan kebutuhan laptop/PC dengan keyboard dan mouse.
+- Animasi tangan, efek serang, kematian, dan warna dunia tetap tersedia.
+
+Ekstrak seluruh isi ZIP ke G:\My Drive\A2 - Game v2\, Replace, lalu Ctrl+F5.
+Paket lengkap: tidak perlu memasang ZIP sebelumnya satu per satu.

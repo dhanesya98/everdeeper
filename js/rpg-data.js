@@ -1597,7 +1597,7 @@ window.RPG_DATA = (function() {
         color: '#a855f7',
         mechanic: {
           name: 'Kutukan Pembusuk & Hisapan Jiwa (Corruption & Life Drain)',
-          desc: 'Setiap serangan menanam kutukan Corruption pada musuh (maks 5 stack). Setiap awal giliran musuh, Corruption membakar HP mereka dan 50% damage diserap kembali memulihkan HP pemain! Membunuh musuh ber-Corruption memberi +30% HP & +1 AP.'
+          desc: 'Setiap serangan menanam kutukan Corruption pada musuh (maks 5 stack). Setiap awal giliran musuh, Corruption membakar HP mereka dan 50% damage diserap kembali memulihkan HP pemain! Membunuh musuh ber-Corruption memberi +8% HP (maks. 40) & +1 AP.'
         },
         nodes: [
           {
@@ -2283,7 +2283,7 @@ window.RPG_DATA = (function() {
         id: 'necromancer',
         name: 'Kutukan Pembusuk Jiwa (Hexbound)',
         icon: 'skull',
-        desc: 'Kutukan Corruption DoT membakar musuh tiap gilirannya dan menyerap 50-60% damage memulihkan HP pemain. Kills memberi +30% HP & +1 AP.',
+        desc: 'Kutukan Corruption DoT membakar musuh tiap gilirannya dan menyerap 50-60% damage memulihkan HP pemain. Kills memberi +8% HP (maks. 40) & +1 AP.',
         passives: [
           { id: 'abyssal_corruption', name: 'Kutukan Pembusuk (Corruption)', desc: '+20 Max HP, +6 Magic ATK. Serangan menanam kutukan Corruption yang membakar musuh.' },
           { id: 'soul_siphon', name: 'Hisapan Jiwa (Soul Siphon)', desc: 'Life Drain Corruption naik ke 60% dan musuh ber-Corruption kehilangan -5 DEF per stack.' }
@@ -2361,7 +2361,7 @@ window.RPG_DATA = (function() {
     { id: 'boon_solar_edge', name: 'Bilah Percikan Surya', icon: 'sun', type: 'Offensive', desc: 'Serangan dasar memiliki 30% peluang memicu percikan bara suci (+18 True DMG).' },
     { id: 'boon_bastion_core', name: 'Teras Benteng Abadi', icon: 'shield', type: 'Defensive', desc: '+30 Max HP permanen dan +6 DEF tambahan.' },
     { id: 'boon_swift_step', name: 'Langkah Kilat Fajar', icon: 'lightning', type: 'Utility', desc: '+1 Jangkauan gerak langkah petak di mode eksplorasi & pertempuran.' },
-    { id: 'boon_potion_master', name: 'Eliksir Surya Murni', icon: 'flask', type: 'Utility', desc: 'Lentera Flask kini memulihkan 60% HP (dari 45%) dan seketika memberi +1 AP gratis.' },
+    { id: 'boon_potion_master', name: 'Eliksir Surya Murni', icon: 'flask', type: 'Utility', desc: 'Lentera Flask kini memulihkan 40% HP, maksimal 140 (normal 30%, maksimal 110) dan seketika memberi +1 AP gratis.' },
     { id: 'boon_poise_crush', name: 'Hantaman Gempa Purba', icon: 'hammer', type: 'Offensive', desc: 'Semua skill serangan menghasilkan +15 Poise Damage tambahan ke musuh.' },
     { id: 'boon_adrenaline_surge', name: 'Gelombang Tekad', icon: 'fire', type: 'Combat', desc: 'Mengisi Adrenaline 2x lebih cepat saat menyerang atau terkena hantaman.' },
     { id: 'boon_critical_echo', name: 'Gema Kritis Fajar', icon: 'spark', type: 'Offensive', desc: 'Setiap Critical Hit memicu gelombang kejut yang melukai musuh terdekat sebesar 20 DMG.' },

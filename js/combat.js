@@ -193,7 +193,8 @@ window.GameCombat = (function() {
             intentHtml = `${GameIcons.svg('shield', 'fantasy-icon icon-xs')} <span>${bossDef ? bossDef.gimmick.split(':')[0] : 'Kuda-Kuda'}</span>`;
           } else {
             intentType = 'intent-skill';
-            const skillName = (enemy.stats.skills && enemy.stats.skills[0]) || 'Amukan Bos';
+            const firstSkill = (enemy.stats.skills && enemy.stats.skills[0]) || 'Amukan Bos';
+            const skillName = typeof firstSkill === 'string' ? firstSkill : firstSkill.name;
             intentHtml = `${GameIcons.svg('fire', 'fantasy-icon icon-xs')} <span>${skillName}</span>`;
           }
         } else if (enemy.isElite) {
@@ -337,6 +338,7 @@ window.GameCombat = (function() {
           }
         }
 
+        eStats = AbyssBalance.enemy(eStats, this.dungeon.floorData.floor, this.inventory.abyssContract);
         const enemyUnit = {
           isPlayer: false,
           isBoss: isBoss,
@@ -446,6 +448,9 @@ window.GameCombat = (function() {
 
       // Reset AP & Process Buffs/Cooldowns
       activeUnit.ap = activeUnit.maxAp;
+      activeUnit.buffs.guard = 0;
+      activeUnit.buffs.dodge = 0;
+      activeUnit.buffs.barrier = Math.min(activeUnit.buffs.barrier || 0, Math.round(activeUnit.maxHp * .3));
 
       // Handle Stun Immunity cooldown
       if (activeUnit.stunImmunity && activeUnit.stunImmunity > 0) {
@@ -454,7 +459,7 @@ window.GameCombat = (function() {
 
       // Hexbound: Corruption DoT tick at start of enemy turn
       if (!activeUnit.isPlayer && activeUnit.corruptionStacks > 0 && activeUnit.hp > 0) {
-        const dotDmg = activeUnit.corruptionStacks * 8;
+        const dotDmg = Math.min(activeUnit.hp, activeUnit.corruptionStacks * 8);
         activeUnit.hp = Math.max(0, activeUnit.hp - dotDmg);
         this.showFloatingText(activeUnit, `-${dotDmg} Corruption DoT`, 0xa855f7);
         this.shakeCamera(0.12, 120);
@@ -464,7 +469,7 @@ window.GameCombat = (function() {
         if (hero && hero.hp > 0) {
           const passives = (this.inventory && this.inventory.passives) || [];
           const drainPct = passives.includes('soul_siphon') ? 0.60 : 0.50;
-          const healAmt = Math.max(1, Math.round(dotDmg * drainPct));
+          const healAmt = Math.min(20, Math.round(dotDmg * drainPct));
           hero.hp = Math.min(hero.maxHp, hero.hp + healAmt);
           this.showFloatingText(hero, `+${healAmt} HP Life Drain`, 0x22c55e);
           GameAudio.playHeal();
@@ -475,7 +480,7 @@ window.GameCombat = (function() {
 
           this.logCombat(`${activeUnit.name} tewas akibat pembusukan jiwa Corruption!`, 'skull');
           if (hero) {
-            const hAmt = Math.round(hero.maxHp * 0.30);
+            const hAmt = Math.min(40, Math.round(hero.maxHp * .08));
             hero.hp = Math.min(hero.maxHp, hero.hp + hAmt);
             hero.ap = Math.min(hero.maxAp, hero.ap + 1);
             this.showFloatingText(hero, `+${hAmt} HP & +1 AP (Harvest)`, 0x22c55e);
@@ -671,6 +676,13 @@ window.GameCombat = (function() {
           }
         }
 
+        if (this.inventory.abyssContract) {
+          goldGained = Math.round(goldGained * 1.5);
+          expGained = Math.round(expGained * 1.3);
+          if (this.combatants.some(c => !c.isPlayer && c.isBoss)) {
+            lootGained.push({...AbyssContractRelics[(this.dungeon.floorData.floor - 1) % AbyssContractRelics.length]});
+          }
+        }
         // Apply Gold Multiplier (from Boons and Relics like Mimic Lucky Tongue)
         const goldMult = this.inventory.getGoldMultiplier ? this.inventory.getGoldMultiplier() : 1.0;
         goldGained = Math.round(goldGained * goldMult);
@@ -946,6 +958,7 @@ window.GameCombat = (function() {
     }
 
     useSkill(attacker, target, skill) {
+      skill = {...skill};
       attacker.cooldowns = attacker.cooldowns || {};
 
       if (attacker.ap < skill.cost) {
@@ -993,7 +1006,7 @@ window.GameCombat = (function() {
           }
 
           if (skill.dodgeBuff) {
-            attacker.buffs.dodge = Math.min(0.9, (attacker.buffs.dodge || 0) + skill.dodgeBuff);
+            attacker.buffs.dodge = Math.min(0.6, (attacker.buffs.dodge || 0) + skill.dodgeBuff);
             this.showFloatingText(attacker, `+${Math.round(skill.dodgeBuff * 100)}% Dodge`, 0x22c55e);
           }
           if (skill.apRefund) {
@@ -1025,8 +1038,8 @@ window.GameCombat = (function() {
       // Handle Attack skill against target
       if (!target || target.hp <= 0) return false;
 
-      const passives = (this.inventory && this.inventory.passives) || [];
-      const boons = (this.inventory && this.inventory.boons) || [];
+      const passives = attacker.isPlayer ? ((this.inventory && this.inventory.passives) || []) : [];
+      const boons = attacker.isPlayer ? ((this.inventory && this.inventory.boons) || []) : [];
 
       // Check Dodge on Target
       if (target.buffs && target.buffs.dodge && Math.random() < target.buffs.dodge) {
@@ -1214,7 +1227,7 @@ window.GameCombat = (function() {
           critChance = 1.0;
           mult *= 1.75;
           attacker.isVanished = true;
-          attacker.buffs.dodge = Math.min(0.9, (attacker.buffs.dodge || 0) + 0.60);
+          attacker.buffs.dodge = Math.min(0.6, (attacker.buffs.dodge || 0) + 0.60);
           this.showFloatingText(attacker, '100% CRIT & VANISH AKTIF!', 0xc084fc);
           this.logCombat(`Titik Vital Terbuka! Serangan 100% Critical dan ${attacker.name} lenyap (Vanish)!`, 'shadow');
         }
@@ -1308,7 +1321,7 @@ window.GameCombat = (function() {
         targetDef = Math.max(0, targetDef - 5);
       }
 
-      let rawDmg = Math.max(1, Math.round((baseAtk * mult) - (targetDef * 0.6)));
+      let rawDmg = AbyssBalance.damage(baseAtk, mult, targetDef);
       let poiseDmg = Math.round((skill.poiseDmg || 15) * (isCrit ? 1.5 : 1.0));
 
       // Cursed Altar Vulnerability (+25% damage taken by hero)
@@ -1320,7 +1333,7 @@ window.GameCombat = (function() {
       const isCommanderExec = attacker.isPlayer && passives.includes('tactical_command') && (skill.isExecute || (target.hp <= target.maxHp * 0.25));
       const isShadowExec = attacker.isPlayer && passives.includes('anatomical_insight') && (skill.isExecute || (target.hp <= target.maxHp * 0.30));
       if (isCommanderExec || isShadowExec) {
-        rawDmg = target.hp + 999;
+        rawDmg = target.isBoss ? Math.max(rawDmg, Math.round(target.maxHp * .12)) : target.hp;
         this.showFloatingText(target, 'EKSEKUSI MATI!', 0xff0000, 'floating-crit');
         this.logCombat(`VONIS EKSEKUSI! ${target.name} langsung dieksekusi mati seketika!`, 'skull');
         GameAudio.playHeavyImpact();
@@ -1337,7 +1350,12 @@ window.GameCombat = (function() {
         this.showFloatingText(target, '+18 Percikan Surya', 0xffa500);
       }
 
-      // Deal damage
+      // Deal damage: barrier absorbs actual damage and cannot grow without bound.
+      const barrier = Math.min(target.buffs.barrier || 0, Math.round(target.maxHp * .3));
+      const absorbed = Math.min(barrier, rawDmg);
+      target.buffs.barrier = barrier - absorbed;
+      rawDmg -= absorbed;
+      const actualDamage = Math.min(target.hp, rawDmg);
       target.hp = Math.max(0, target.hp - rawDmg);
       target.poise = Math.max(0, target.poise - poiseDmg);
 
@@ -1406,7 +1424,7 @@ window.GameCombat = (function() {
       // Boon: Sentuhan Darah Abyss (15% Lifesteal) or Skill / Passive Lifesteal
       const skillLifesteal = (skill.lifesteal || 0) + (boons.includes('boon_vampiric_bite') ? 0.15 : 0) + (passives.includes('neurotoxin_stasis') ? 0.15 : 0);
       if (skillLifesteal > 0) {
-        const vHeal = Math.max(1, Math.round(rawDmg * skillLifesteal));
+        const vHeal = Math.max(0, Math.min(Math.round(attacker.maxHp * .08), Math.round(actualDamage * Math.min(.30, skillLifesteal))));
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + vHeal);
         this.showFloatingText(attacker, `+${vHeal} HP Lifesteal`, 0x22c55e);
       }
@@ -1521,7 +1539,7 @@ window.GameCombat = (function() {
 
         // Check 4-piece Blood Set bonus
         if (attacker.isPlayer && this.inventory.activeSetBonuses.some(b => b.set === 'blood' && b.tier === 4)) {
-          const healAmt = Math.round(attacker.maxHp * 0.15);
+          const healAmt = Math.min(35, Math.round(attacker.maxHp * .08));
           attacker.hp = Math.min(attacker.maxHp, attacker.hp + healAmt);
           this.showFloatingText(attacker, `+${healAmt} HP (Avatar Darah)`, 0x2ecc71);
           GameAudio.playHeal();
@@ -1566,7 +1584,7 @@ window.GameCombat = (function() {
 
         // Hexbound: Harvest on Kill (+30% HP & +1 AP)
         if (attacker.isPlayer && this.inventory.passives.includes('abyssal_corruption') && (target.corruptionStacks || 0) > 0) {
-          const hAmt = Math.round(attacker.maxHp * 0.30);
+          const hAmt = Math.min(40, Math.round(attacker.maxHp * .08));
           attacker.hp = Math.min(attacker.maxHp, attacker.hp + hAmt);
           attacker.ap = Math.min(attacker.maxAp, attacker.ap + 1);
           this.showFloatingText(attacker, `+${hAmt} HP & +1 AP (Hisap Jiwa)`, 0x22c55e);
@@ -1575,8 +1593,8 @@ window.GameCombat = (function() {
 
         // Passive: Vanish on Kill (Shadow Stalker)
         if (attacker.isPlayer && this.inventory.passives.includes('vanish_kill')) {
-          attacker.buffs.dodge = (attacker.buffs.dodge || 0) + 0.5;
-          const vHeal = Math.round(attacker.maxHp * 0.20);
+          attacker.buffs.dodge = Math.min(.6, (attacker.buffs.dodge || 0) + .5);
+          const vHeal = Math.min(35, Math.round(attacker.maxHp * .08));
           attacker.hp = Math.min(attacker.maxHp, attacker.hp + vHeal);
           if (attacker.cooldowns['flash_strike']) attacker.cooldowns['flash_strike'] = 0;
           this.showFloatingText(attacker, `+${vHeal} HP & Vanish!`, 0xa855f7);
@@ -1662,13 +1680,13 @@ window.GameCombat = (function() {
     }
 
     usePotion(unit) {
-      if (!this.isActive || !this.isPlayerTurn() || !unit.isPlayer || this.inventory.potions <= 0 || unit.ap < 1) return false;
-      unit.ap -= 1;
+      if (!this.isActive || !this.isPlayerTurn() || !unit.isPlayer || this.inventory.potions <= 0 || unit.ap < 2) return false;
+      unit.ap -= 2;
       this.inventory.potions--;
 
       const hasMaster = this.inventory.boons && this.inventory.boons.includes('boon_potion_master');
-      const healPct = hasMaster ? 0.60 : 0.45;
-      const healAmt = Math.round(unit.maxHp * healPct);
+      const healPct = hasMaster ? 0.40 : 0.30;
+      const healAmt = Math.min(hasMaster ? 140 : 110, Math.round(unit.maxHp * healPct));
       unit.hp = Math.min(unit.maxHp, unit.hp + healAmt);
       unit.poise = Math.min(unit.maxPoise, unit.poise + 20);
 
@@ -1710,6 +1728,25 @@ window.GameCombat = (function() {
         this.logCombat(`${enemy.name} meregenerasi ${rHeal} HP berkat Darah Abadi!`, 'flask');
       }
 
+      // Support buys time for allies; a readable priority target.
+      if (enemy.stats.role === 'support' && !enemy.supportRest) {
+        const ally = this.combatants.filter(c => !c.isPlayer && c.hp > 0 && c.hp < c.maxHp).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];
+        if (ally) { const heal = Math.round(ally.maxHp * .12); ally.hp = Math.min(ally.maxHp, ally.hp + heal); enemy.ap = Math.max(0, enemy.ap - 2); enemy.supportRest = true; this.showFloatingText(ally, '+'+heal+' HP — Paduan Jiwa', 0xcccccc); }
+      } else { enemy.supportRest = false; }
+      // Heavy attacks mark a tile one enemy turn before impact.
+      if (enemy.stats.role === 'breaker' || enemy.isBoss) {
+        if (!enemy.windup) {
+          enemy.windup = {gx:hero.gx,gz:hero.gz};
+          this.logCombat(enemy.name + ' menyiapkan hantaman di petakmu. Pindah sebelum giliran berikutnya!', 'warning');
+          this.showFloatingText(hero, 'BAHAYA: PINDAH PETAK!', 0xff5555);
+        } else {
+          if (hero.gx === enemy.windup.gx && hero.gz === enemy.windup.gz) {
+            hero.buffs.guard = 0; hero.buffs.barrier = 0;
+            this.useSkill(enemy, hero, {id:'heavy_telegraph',name:'Hantaman Pemecah Segel',cost:2,dmgMult:1.7,poiseDmg:35});
+          } else { this.logCombat('Hantaman ' + enemy.name + ' meleset — perpindahanmu berhasil!', 'shield'); }
+          enemy.windup = null;
+        }
+      }
       // Check Boss Phase Gimmick at 50% HP
       if (enemy.isBoss && enemy.hp < enemy.maxHp * 0.5 && !enemy.usedGimmick) {
         enemy.usedGimmick = true;
@@ -1761,7 +1798,7 @@ window.GameCombat = (function() {
 
           if (enemy.isBoss && enemy.stats.skills && enemy.stats.skills.length > 0) {
             const pick = enemy.stats.skills[Math.floor(Math.random() * enemy.stats.skills.length)];
-            skillName = pick;
+            skillName = typeof pick === 'string' ? pick : pick.name;
             dmgMult = 1.35;
             poiseDmg = 22;
             skillCost = 2;
@@ -1783,7 +1820,7 @@ window.GameCombat = (function() {
           this.useSkill(enemy, hero, aiSkill);
 
           // Only Bosses with remaining AP might execute a secondary light strike
-          if (enemy.isBoss && enemy.ap >= 1 && enemy.hp > 0 && hero.hp > 0) {
+          if ((enemy.isBoss || enemy.stats.role === 'archer') && enemy.ap >= 1 && enemy.hp > 0 && hero.hp > 0) {
             const t2 = setTimeout(() => {
               if (!this.isActive) return;
               if (this.isUnitInRange(enemy, hero, attackRange)) {
@@ -2071,8 +2108,8 @@ window.GameCombat = (function() {
       const potionBtn = document.getElementById('potionBtn');
       const potionSub = document.getElementById('potionSub');
       if (potionBtn && potionSub) {
-        potionSub.textContent = `${this.inventory.potions}/${this.inventory.maxPotions} Flask • +45% HP`;
-        if (!isHeroTurn || this.inventory.potions <= 0 || hero.ap < 1) {
+        potionSub.textContent = `${this.inventory.potions}/${this.inventory.maxPotions} Flask • +30% HP (maks. 110)`;
+        if (!isHeroTurn || this.inventory.potions <= 0 || hero.ap < 2) {
           potionBtn.style.opacity = '0.5';
           potionBtn.style.cursor = 'not-allowed';
         } else {
@@ -2161,7 +2198,7 @@ window.GameCombat = (function() {
 
       const baseAtk = hero.stats.atk || 20;
       const targetDef = (target.stats.def || 5) + (target.buffs.guard || 0);
-      const estDmg = Math.max(1, Math.round((baseAtk * mult) - (targetDef * 0.6)));
+      const estDmg = AbyssBalance.damage(baseAtk, mult, targetDef);
       const poiseDmg = skill.poiseDmg || 15;
       const willBreak = (target.poise - poiseDmg) <= 0;
 

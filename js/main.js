@@ -29,6 +29,7 @@ window.EverDeeperV2 = (function() {
   let lastFogCell = "";
   let backdropFrame = 0;
   let victoryPending=false;
+  let cameraAim=null;
 
   function init() {
     gameState = 'title'; // Start at Title Screen / Landing Page
@@ -102,6 +103,7 @@ window.EverDeeperV2 = (function() {
 
   function loadFloor(floorIdx) {
     currentFloorIndex = floorIdx;
+    if (gameState !== 'title') { inventory.savedDepth = floorIdx; inventory.saveToStorage(); }
     const floorData = RPG_DATA.FLOORS[currentFloorIndex];
 
     victoryPending=false;GameDeath.clear();GameAttack.clear();
@@ -223,11 +225,12 @@ window.EverDeeperV2 = (function() {
     combat = new GameCombat.CombatManager(scene, dungeon, inventory, onCombatFinished);
     if (combat && combat.setCamera) {
       combat.setCamera(camera);
+      GameCombatGuide.bind(combat,unit=>{const p=unit.model.position,h=(unit.model.bodyRoot?.geometry?.parameters?.height||1.6)*(unit.model.scale.y||1);cameraAim={angle:Math.atan2(heroModel.position.x-p.x,heroModel.position.z-p.z),pitch:Math.max(-.65,Math.min(.4,Math.atan2(h*.55-1.22,Math.max(.1,heroModel.position.distanceTo(p)))))};});
     }
 
     // Update Floor Banner UI
     document.getElementById('floorTitle').textContent = floorData.name;
-    document.getElementById('floorSubtitle').textContent = floorData.subtitle;
+    document.getElementById('floorSubtitle').textContent = floorData.subtitle + (inventory.abyssContract ? ' · KONTRAK BARA: ATK +20%, HP +15%' : '');
     showNotification(`${GameIcons.svg('target')} Masuk ke ${floorData.name}`);
     updateHUD();
   }
@@ -377,7 +380,7 @@ window.EverDeeperV2 = (function() {
         icKey = nearby.locked ? 'lock' : 'key';
         action = nearby.locked ? 'Tangga Tersegel (Kalahkan Bos Lantai)' : 'Turun ke Lantai Berikutnya';
       }
-      promptEl.innerHTML = `${GameIcons.svg(icKey, 'fantasy-icon icon-md')} <span>${action}</span> <kbd class="interact-key-badge">E</kbd>`;
+      promptEl.innerHTML = `${GameIcons.svg(icKey, 'fantasy-icon icon-md')} <kbd class="interact-key-badge">E</kbd> <span>${action}</span>`;
       promptEl.currentEntity = nearby;
       promptEl.onclick = () => interactWithNearby();
     } else if (promptEl) {
@@ -542,14 +545,28 @@ window.EverDeeperV2 = (function() {
   }
 
   function startCursedAmbush(chestEntity) {
-    if (!chestEntity) return;
+    if (!chestEntity || chestEntity.opened || gameState !== 'explore') return;
+    const heroCell = dungeon.worldToGrid(heroModel.position.x, heroModel.position.z);
+    const occupied = new Set(activeEntities.filter(e => !e.defeated).map(e => `${e.gx},${e.gz}`));
+    const queue = [heroCell], seen = new Set([`${heroCell.gx},${heroCell.gz}`]), spots = [];
+    for (let i = 0; i < queue.length && spots.length < 2; i++) {
+      const cell = queue[i];
+      for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const gx = cell.gx + dx, gz = cell.gz + dz, key = `${gx},${gz}`;
+        if (seen.has(key) || !dungeon.isWalkable(gx, gz)) continue;
+        seen.add(key);
+        if (occupied.has(key)) continue;
+        queue.push({gx,gz});
+        if (spots.length < 2) spots.push({gx,gz});
+      }
+    }
+    if (!spots.length) { showNotification('Tidak ada ruang untuk penyergapan. Dekati peti dari sisi lain.'); return; }
     chestEntity.opened = true;
     if (chestEntity.model && chestEntity.model.lidGroup) {
       chestEntity.model.lidGroup.rotation.x = -Math.PI / 2.5;
     }
 
     gameState = 'combat';
-    if(targetEntity.model){const p=targetEntity.model.position;cameraAngle=Math.atan2(heroModel.position.x-p.x,heroModel.position.z-p.z);const size=new THREE.Box3().setFromObject(targetEntity.model.bodyRoot||targetEntity.model).getSize(new THREE.Vector3());lookPitch=Math.max(-.65,Math.min(.25,Math.atan2(size.y*.55-1.22,heroModel.position.distanceTo(p))));}
     heroModel.isMoving=false;
     const computedStats = inventory.getComputedStats();
     if (inventory.currentHp !== undefined) {
@@ -582,7 +599,23 @@ window.EverDeeperV2 = (function() {
       }
     ];
 
+    ambushEnemies.length = spots.length;
+    ambushEnemies.forEach((enemy, i) => {
+      Object.assign(enemy, spots[i]);
+      const def = RPG_DATA.MONSTERS[enemy.monsterKey] || Object.values(RPG_DATA.MONSTERS)[0];
+      enemy.model = GameModels.createMonster(def.modelType, false);
+      const pos = dungeon.gridToWorld(enemy.gx, enemy.gz);
+      enemy.model.position.set(pos.x, 0, pos.z);
+      scene.add(enemy.model);
+      activeEntities.push(enemy);
+      dungeon.entities.push(enemy);
+    });
+    document.getElementById('interactPrompt').style.display = 'none';
+    activeCursedChestEntity = null;
+    hideSkillTooltip();
     combat.startBattle(heroModel, computedStats, ambushEnemies, true);
+    heroModel.isMoving = false;
+    GameCombatGuide.begin();
     showNotification(`${GameIcons.svg('skull')} PENYERGAPAN KUTUKAN! Monster Void muncul dari Peti Terkutuk!`);
     updateHUD();
   }
@@ -745,6 +778,13 @@ window.EverDeeperV2 = (function() {
 
     // Build enemies group for this fight
     const enemies = [targetEntity];
+    if (targetEntity.type === 'monster') {
+      const limit = dungeon.floorData.floor >= 4 ? 3 : 2;
+      for (const other of activeEntities) {
+        if (enemies.length >= limit) break;
+        if (other !== targetEntity && other.type === 'monster' && !other.defeated && other.model && !other.model.userData.deathStarted && Math.abs(other.gx-targetEntity.gx)+Math.abs(other.gz-targetEntity.gz)<=5) enemies.push(other);
+      }
+    }
 
     if (targetEntity.type === 'boss') {
       const bDef = RPG_DATA.BOSSES[targetEntity.bossId];
@@ -757,6 +797,7 @@ window.EverDeeperV2 = (function() {
     }
 
     combat.startBattle(heroModel, computedStats, enemies);
+    heroModel.isMoving=false;GameCombatGuide.begin();
     updateHUD();
   }
 
@@ -818,6 +859,7 @@ window.EverDeeperV2 = (function() {
     heroModel.bodyRoot.visible=!playing;heroModel.heroRing.visible=false;
     if(camera.fov!==70){camera.fov=70;camera.updateProjectionMatrix();}
     if(playing){
+      if(cameraAim){const d=Math.atan2(Math.sin(cameraAim.angle-cameraAngle),Math.cos(cameraAim.angle-cameraAngle));cameraAngle+=d*.18;lookPitch+=(cameraAim.pitch-lookPitch)*.18;if(Math.abs(d)<.004&&Math.abs(cameraAim.pitch-lookPitch)<.004)cameraAim=null;}
       camera.position.set(heroModel.position.x,1.22,heroModel.position.z);
       camera.lookAt(heroModel.position.x-Math.sin(cameraAngle)*Math.cos(lookPitch)*5,1.22+Math.sin(lookPitch)*5,heroModel.position.z-Math.cos(cameraAngle)*Math.cos(lookPitch)*5);
       GameRetro.hud(cameraAngle,heroModel);
@@ -889,17 +931,19 @@ window.EverDeeperV2 = (function() {
       }
 
       // Camera rotate shortcuts
-      if (e.code === 'KeyQ') cameraAngle -= Math.PI / 8;
-      if (e.code === 'KeyR') cameraAngle += Math.PI / 8;
+      if (e.code === 'KeyQ'){cameraAim=null;cameraAngle -= Math.PI / 2;}
+      if (e.code === 'KeyR'){cameraAim=null;cameraAngle += Math.PI / 2;}
 
       // Combat hotkeys 1-5, G (Guard), 6 (Flask) & Space
       if (gameState === 'combat' && combat && combat.isPlayerTurn()) {
+        if(e.code==='Tab'){e.preventDefault();GameCombatGuide.cycle();}
+        if(e.code==='KeyF'||e.code==='Enter'){e.preventDefault();GameCombatGuide.attack();}
         const skills = inventory.getActiveSkills ? inventory.getActiveSkills() : RPG_DATA.CLASSES[inventory.heroClassId].skills;
-        if (e.code === 'Digit1') selectSkill(skills[0]);
-        if (e.code === 'Digit2') selectSkill(skills[1]);
-        if (e.code === 'Digit3') selectSkill(skills[2]);
-        if (e.code === 'Digit4') selectSkill(skills[3]);
-        if (e.code === 'Digit5') selectSkill(skills[4]);
+        if (e.code === 'Digit1') selectSkill(skills[0],true);
+        if (e.code === 'Digit2') selectSkill(skills[1],true);
+        if (e.code === 'Digit3') selectSkill(skills[2],true);
+        if (e.code === 'Digit4') selectSkill(skills[3],true);
+        if (e.code === 'Digit5') selectSkill(skills[4],true);
         if (e.code === 'KeyG') useTacticalGuard();
         if (e.code === 'Digit6') useCombatPotion();
         if (e.code === 'Space') endCombatTurn();
@@ -944,6 +988,7 @@ window.EverDeeperV2 = (function() {
 
     window.addEventListener('mousemove', e => {
       if (isRightMouseDown) {
+        cameraAim=null;
         const deltaX = e.clientX - mousePrevX;
         lookPitch=Math.max(-.85,Math.min(.65,lookPitch-(e.clientY-mousePrevY)*.004));mousePrevY=e.clientY;
         cameraAngle -= deltaX * 0.006;
@@ -1075,7 +1120,7 @@ window.EverDeeperV2 = (function() {
     });
   }
 
-  function selectSkill(skill) {
+  function selectSkill(skill,fireSingle=false) {
     if (!combat || !combat.isPlayerTurn() || !skill) return;
     combat.selectedSkill = skill;
     const hero = combat.combatants.find(c => c.isPlayer);
@@ -1085,6 +1130,7 @@ window.EverDeeperV2 = (function() {
       combat.useSkill(hero, hero, skill);
     } else {
       combat.showSkillRange(hero, skill);
+      if(fireSingle)GameCombatGuide.single(skill);
     }
     combat.updateCombatUI();
   }
@@ -1107,7 +1153,7 @@ window.EverDeeperV2 = (function() {
         return;
       }
       inventory.potions--;
-      const healAmt = Math.round(stats.maxHp * 0.45);
+      const healAmt = Math.min(110, Math.round(stats.maxHp * 0.30));
       inventory.currentHp = Math.min(stats.maxHp, cur + healAmt);
       inventory.saveToStorage();
       GameAudio.playHeal();
@@ -1230,7 +1276,7 @@ window.EverDeeperV2 = (function() {
         heroModel = GameModels.createHero(inventory.heroClassId);
         scene.add(heroModel);
         renderSkillButtons();
-        loadFloor(0);
+        loadFloor(Math.max(0, Math.min(RPG_DATA.FLOORS.length-1, inventory.savedDepth || 0)));
         showNotification(`${GameIcons.svg('scroll')} Ekspedisi dilanjutkan dari catatan lentera!`);
       });
     }
@@ -1418,7 +1464,7 @@ window.EverDeeperV2 = (function() {
     const guardBtn = document.getElementById('guardActionBtn');
 
     if (potionSub) {
-      potionSub.textContent = `${inventory.potions}/${inventory.maxPotions} Flask • +45% HP`;
+      potionSub.textContent = `${inventory.potions}/${inventory.maxPotions} Flask • +30% HP (maks. 110)`;
     }
     if (potionBtn) {
       if (inventory.potions <= 0) {
@@ -1520,6 +1566,10 @@ window.EverDeeperV2 = (function() {
 
     document.body.appendChild(tooltip);
     tooltip.style.display = 'block';
+    document.body.classList.add('skill-tooltip-open');
+    const barTop = document.getElementById('gameBottomBar').getBoundingClientRect().top;
+    tooltip.style.setProperty('--tooltip-bottom', Math.max(12, innerHeight - barTop + 12) + 'px');
+    tooltip.style.setProperty('--tooltip-room', Math.max(80, barTop - 28) + 'px');
     tooltip.innerHTML = `
       <div class="tooltip-header">
         <div class="tooltip-title">
@@ -1546,9 +1596,11 @@ window.EverDeeperV2 = (function() {
   }
 
   function hideSkillTooltip() {
+    document.body.classList.remove('skill-tooltip-open');
     const tooltip = document.getElementById('skillTooltip');
     if (tooltip) tooltip.style.display = 'none';
   }
+  window.addEventListener('resize', hideSkillTooltip);
 
   // --- UNIVERSAL BENTO FLOATING TOOLTIP ENGINE (ZERO TEXT OVERLOAD) ---
   function showItemTooltip(e, item, source = 'bag') {
@@ -2152,7 +2204,13 @@ window.EverDeeperV2 = (function() {
     modal.style.display = 'flex';
     gameState = 'dialogue';
 
+    let route = document.getElementById('abyssRoute');
+    if (!route) { route = document.createElement('div'); route.id='abyssRoute'; document.getElementById('storyContinueBtn').before(route); }
+    route.innerHTML = '<label style="display:block;padding:14px;color:#ddd;font:14px/1.6 sans-serif"><input id="abyssContractChoice" type="checkbox"> Kontrak Bara: musuh +20% ATK / +15% HP; hadiah +50% gold / +30% EXP. Tanpa kontrak: pulihkan 20% HP saat turun.</label>';
     document.getElementById('storyContinueBtn').onclick = () => {
+      inventory.abyssContract = document.getElementById('abyssContractChoice').checked ? 1 : 0;
+      if (!inventory.abyssContract) { const s=inventory.getComputedStats(); inventory.currentHp=Math.min(s.maxHp,s.hp+Math.round(s.maxHp*.2)); }
+      inventory.saveToStorage();
       modal.style.display = 'none';
       gameState = 'explore';
       loadFloor(nextFloorIdx);
@@ -2418,12 +2476,13 @@ window.EverDeeperV2 = (function() {
         if (serviceHeader) serviceHeader.innerHTML = `${GameIcons.svg('flask', 'fantasy-icon icon-xs')} Layanan Peracikan Eliksir Bunga Surya:`;
         if (forgeTitle) forgeTitle.innerHTML = `${GameIcons.svg('flask', 'fantasy-icon icon-sm')} Racik Eliksir Darah Surya (+25 Max HP)`;
         if (serviceDesc) serviceDesc.innerHTML = 'Menyaring nektar bunga surya dengan embun beku. Menambah <b>+25 Max HP secara permanen</b> untuk ekspedisi ini!';
-        const elixirCost = 65;
+        const elixirCost = 90 + Math.min(5, inventory.forgeLevel || 0) * 70;
         if (temperBtn) {
           temperBtn.textContent = `Racik Eliksir Darah (${elixirCost} Gold)`;
           temperBtn.style.background = '#065f46';
           temperBtn.style.borderColor = '#10b981';
           temperBtn.onclick = () => {
+            if ((inventory.forgeLevel || 0) >= 5) { showNotification('Limite eliksir tercapai: 5/5.'); return; }
             if (inventory.gold < elixirCost) {
               showNotification(`${GameIcons.svg('warning')} Butuh ${elixirCost} Gold untuk meracik Eliksir Darah!`);
               return;
@@ -2639,7 +2698,16 @@ window.EverDeeperV2 = (function() {
   }
 
   function showVictoryGameModal() {
-    alert("SELAMAT! Kau telah mengalahkan Kaisar Kegelapan di dasar terdalam Abyss dan menyelamatkan adikmu, Liora! Matahari kembali bersinar di permukaan!");
+    gameState = 'dialogue';
+    const modal=document.getElementById('storyDescentModal');
+    document.getElementById('storyDescentSpeaker').textContent='Liora — Epilog';
+    document.getElementById('storyDescentTitle').textContent='Nama Terakhir, Fajar Pertama';
+    document.getElementById('storyDescentQuote').textContent='Liora menyebut nama ayah sebagai nama terakhir. Gema penjaga melepaskan senjatanya. Tidak ada pengganti yang ditinggalkan di singgasana: untuk pertama kalinya, sumpah itu berakhir. Di tangga, para tawanan saling menyebut nama agar tidak ada yang tertinggal. Kaelen membuka gerbang, Eloria menunggu dengan obat, dan Valen membawa daftar yang kini utuh. Liora menggenggam tanganmu: “Besok kita boleh takut pada hal-hal kecil lagi.” Di permukaan, lentera ayah padam perlahan. Matahari sudah cukup.';
+    document.getElementById('storyDescentRelic').textContent='Ekspedisi selesai — Liora dan para tawanan pulang.';
+    const route=document.getElementById('abyssRoute');if(route)route.innerHTML='';
+    const button=document.getElementById('storyContinueBtn');button.textContent='Kembali ke Gerbang Abu — lanjutkan dengan equipment saat ini';
+    button.onclick=()=>{modal.style.display='none';button.textContent='Lanjutkan';gameState='explore';loadFloor(0);};
+    modal.style.display='flex';
   }
 
   function showNotification(msg) {
@@ -2711,6 +2779,7 @@ window.EverDeeperV2 = (function() {
     }
 
     GameAttack.update(delta,!modalOpen&&gameState!=='title');
+    GameCombatGuide.update(camera,gameState==='combat'&&!modalOpen);
     GameDeath.update(delta);
     GamePresentation.update(delta);
     GamePresentation.updateLights(delta, heroModel);

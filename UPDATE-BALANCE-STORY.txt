@@ -1,0 +1,54 @@
+EVER DEEPER — BALANCE & STORY
+
+PAKET LENGKAP. Ekstrak isi ZIP ke folder game, Replace, Ctrl+F5.
+Save lama tetap dapat dibaca. Stat dihitung ulang dengan aturan baru.
+Eliksir lama di atas 5 diperlakukan sebagai 5; equipment tetap disimpan.
+
+PERTAHANAN & PEMULIHAN
+- DEF memakai pengurangan bertahap, maksimal 75% mitigasi dari armor.
+- Eliksir hanya +25 HP, maksimal 5; harga 90 lalu +70 setiap pembelian.
+- Lifesteal berdasarkan HP yang benar-benar hilang, maksimal 30% damage
+  aktual dan 8% max HP per serangan. Frenzy tidak mengubah data skill asal.
+- Dodge maksimal 60%, berakhir saat giliran pemilik berikutnya.
+- Guard berakhir pada giliran berikutnya. Barrier maksimal 30% max HP.
+- Flask combat: 2 AP, 30% HP maksimal 110. Boon Eliksir: 40% maksimal
+  140 dan refund 1 AP. Eksplorasi: 30% maksimal 110.
+- Healing saat membunuh dibatasi. Eksekusi tidak membunuh boss seketika.
+
+PERTARUNGAN
+- Musuh meningkat menurut kedalaman, bukan equipment pemain.
+- Lantai 2+ memiliki kelompok kecil dengan pemanah dan penyembuh.
+- Encounter maksimal 2 musuh biasa pada lantai awal, 3 pada lantai 4+.
+- Pemanah bisa menembak lagi jika AP tersisa; penyembuh membantu sekutu
+  bergantian. Pemecah segel/boss menandai petak sebelum hantaman besar.
+  Pindah sebelum giliran berikutnya untuk menghindarinya.
+- Teks BAHAYA muncul ketika pemain masih berdiri di petak yang dibidik.
+
+PILIHAN RISIKO
+- Saat turun lantai: jalur normal memulihkan 20% HP.
+- Kontrak Bara: musuh +20% ATK/+15% HP; hadiah +50% gold/+30% EXP.
+- Boss kontrak memberi satu dari tiga meterai dengan keuntungan dan
+  kerugian stat. Meterai memakai ikon yang sudah tersedia.
+
+CERITA
+- Total 8 bab: tiga bab baru setelah Singgasana Hampa.
+- Arsip Nama yang Hilang, Jantung Tungku Gerhana, Fajar di Bawah Jurang.
+- Tiga boss baru, prasasti, dialog NPC lanjutan, dan epilog bersama Liora.
+- Liora berperan aktif menyelamatkan tawanan dan membongkar sumpah ayah.
+- Continue mengingat lantai terakhir; tata ruang dibuat ulang saat dimuat.
+- Setelah epilog, bisa kembali ke gerbang dengan equipment saat ini.
+
+VISUAL & PERFORMA
+- Memakai model/atlas tengkorak, troll, roh, dan vampire yang tersedia.
+- Tidak menambah texture atlas, efek pencahayaan, atau dependensi baru.
+- Kelompok musuh kecil; tidak ada sistem summon tanpa batas.
+
+VALIDASI
+- 20 skill empat kelas dijalankan di browser, tanpa error JavaScript.
+- 8 lantai dan boss dimuat di browser, tanpa error JavaScript.
+- 96 peta acak: spawn monster berada pada petak yang dapat dilalui.
+- Uji damage armor, eliksir, AP/healing flask, simpan/muat kontrak,
+  dan hantaman bertelegraph lolos.
+- Uji browser: serangan 1453 damage pada target HP 10 hanya menyembuhkan
+  3 HP; objek skill tidak berubah akibat Frenzy.
+- Belum dilakukan playthrough penuh untuk menilai kurva kesulitan final.

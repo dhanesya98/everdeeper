@@ -3,6 +3,9 @@ desktop.ini
 Thumbs.db
 .DS_Store
 
+# Helper scripts
+push_github.bat
+
 # Temporary & Log files
 *.log
 *.tmp

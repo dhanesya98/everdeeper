@@ -1,141 +1,188 @@
-# Ever Deeper II: Abyssal Tactics (Turun Terus RPG 2)
-> **Third-Person Isometric Turn-Based Tactical RPG**  
-> Melanjutkan lore dan misteri penyelamatan **Liora** serta pencarian **Matahari yang Hilang** di dasar Abyss.
+# Ever Deeper II: Abyssal Tactics
 
----
+RPG dark fantasy bergaya pixel dengan eksplorasi **orang pertama (FPS)** dan pertarungan taktis berbasis giliran. Kamera tetap orang pertama saat combat, dengan tangan dan senjata terlihat.
 
-## 🌟 Apa yang Baru di Versi 2?
+Ikuti jejak Liora menuju dasar Abyss, temukan rahasia sumpah ayah, dan bantu para tawanan pulang. Versi ini memiliki **empat kelas, delapan bab, build campuran, serta kontrak tantangan opsional**.
 
-Di Versi 1 (`turun-terus-roguelike.html`), alur permainan lebih menitikberatkan pada antarmuka teks, kartu statistik, dan klik menu tombol. 
+## Menjalankan game
 
-**Di Versi 2 (`A2 - Game v2`)**, permainan telah dirombak total menjadi **Full Third-Person Isometric RPG** yang beneran bisa dimainkan dan dikendalikan:
+Gunakan laptop/PC dengan keyboard, mouse, dan browser yang mendukung WebGL.
 
-1. **3D Isometric Dungeon Exploration**:
-   - Karakter utama dapat dikendalikan secara langsung menjelajahi ruang bawah tanah menggunakan **WASD / Tombol Panah**.
-   - Membawa **Lentera Surya (Sun Lantern)** di pinggang karakter yang memancarkan pencahayaan dinamis real-time (flickering point-light) yang menembus kabut kegelapan Abyss.
-   - Kamera isometrik orang ketiga yang halus mengikuti gerak hero, dapat diputar sudut pandangnya (**Q / R** atau **Klik Kanan Tahan Geser Mouse**) dan di-zoom (**Scroll Roda Mouse**).
-   - Interaksi langsung di dunia 3D: Peti Harta Karun (bisa dibuka dengan animasi tutup peti), Altar Surya (pemulih HP & Flask), dan Prasasti Kenangan Liora.
+1. Ekstrak seluruh paket ke satu folder, misalnya `G:\My Drive\A2 - Game v2\`.
+2. Jalankan `play.bat`, atau buka `index.html` di browser.
+3. Pilih **Mulai Ekspedisi Baru** atau **Lanjutkan Ekspedisi**.
 
-2. **Tactical Isometric Turn-Based Combat (Pertarungan Petak Taktis)**:
-   - Saat mendekati musuh atau bos, kamera bertransisi mulus ke **Mode Pertempuran Taktis**.
-   - **Petak Grid Isometrik**: Petak biru menunjukkan area jangkauan langkah, petak merah menunjukkan area serangan dan skill.
-   - **Action Points (AP) System**: Setiap giliran hero memiliki 4 AP untuk mengatur strategi (bergerak, menyerang, menggunakan skill, memasang kuda-kuda bertahan, atau meminum flask).
-   - **Flanking & Backstab Mechanics**: Menyerang musuh dari arah samping (Flank) memberikan bonus damage (+25%). Menyerang tepat dari belakang arah hadap musuh (Backstab) memberikan **100% Guaranteed Critical Hit (+50% bonus damage)**!
-   - **Poise & Stance Break System**: Setiap musuh memiliki meter Poise kuning. Menguras Poise musuh hingga 0 akan memicu **STANCE BREAK** (efek suara kaca pecah, layar bergetar, musuh pingsan selama 1 giliran dan menerima bonus damage kritikal)!
+Jangan menjalankan game dari pratinjau ZIP/WinRAR: folder sementara dapat berubah dan membuat lokasi penyimpanan browser berbeda.
 
-3. **3 Pilihan Kelas Karakter**:
-   - **Vanguard (Warrior)**: Bersenjatakan Claymore baja dan Perisai Benteng. Memiliki Crushing Blow, Shield Slam, Bastion Brace, dan Ultimate Avatar Surya.
-   - **Arcanist (Mage)**: Membawa Tongkat Kristal Surya. Menguasai Arcane Bolt jarak jauh, Fireball ledakan area (AoE), Frost Nova pembeku, dan Supernova berkas suci.
-   - **Skirmisher (Rogue)**: Menggunakan Belati Ganda Beracun. Memiliki kelincahan gerak tinggi (5 petak), Flash Strike (teleportasi langsung ke belakang musuh untuk backstab instan), dan Bom Asap Bayangan.
+Jika browser membatasi aset melalui file lokal, gunakan `play_server.bat`. Launcher ini memerlukan **Node.js** dan membuka `http://localhost:3000`. Biarkan server berjalan selama bermain. Tidak perlu `npm install` atau build.
 
-4. **Sistem Spesialisasi Skill Build & Bakat Pasif**:
-   - Setiap kelas memiliki 2 cabang spesialisasi build unik dengan pasif berbeda:
-     - **Vanguard**: *Bastion Defender* (Poise +25%, Retaliation Thorns 25% pantulan damage) vs *Blood Berserker* (Damage naik seiring menipisnya HP, Shatter Feast heal 20% saat Stance Break).
-     - **Arcanist**: *Solar Pyromancer* (Combustion Wave ledakan bara, Solar Flare +25% burn damage) vs *Cryo-Arbiter* (Deep Freeze pembeku 1 giliran, Arcane Aegis +10 Barrier tiap cast sihir).
-     - **Skirmisher**: *Abyssal Assassin* (Fleet Footed +1 petak gerak & +15% Crit, Anatomical Insight +40% Backstab damage) vs *Venom Trapper* (Venomous Strike racun tumpuk, Vanish on Kill +40% Dodge setelah membunuh).
-   - Pemain dapat mengganti spesialisasi build kapan saja melalui jendela **Profil Karakter (C)**.
+Three.js, gambar, font, dan aset disertakan lokal. Audio memakai Web Audio API; klik menu game untuk mengaktifkan suara sesuai aturan browser.
 
-5. **Eksplorasi Gelap & Mencekam ala Diablo / Torchlight (Unknown Darkness & Fog of War)**:
-   - Labirin terbungkus dalam kegelapan pekat (pitch black void). Hanya lingkaran 5 petak di sekeliling **Lentera Surya** yang tersingkap terang.
-   - Petak yang pernah dikunjungi tetap tersimpan dalam ingatan hero sebagai siluet redup, sementara monster dan bahaya di luar jangkauan lentera tersembunyi sepenuhnya dalam bayang-bayang.
-   - Dilengkapi vignette gelap sinematik di tepi layar untuk atmosfer dark fantasy yang claustrophobic dan misterius.
+## Pembaruan dan save
 
-6. **Landing Page Sinematik & Pilihan Karakter Awal**:
-   - Menu utama atmosferik sebelum terjun ke dalam permainan, lengkap dengan opsi *Mulai Ekspedisi Baru*, *Lanjutkan Ekspedisi (Save Game)*, dan *Panduan Cerita Liora*.
+1. Tutup tab game. Buat salinan folder lama bila ingin menyimpan versi sebelumnya.
+2. Ekstrak **isi ZIP lengkap terbaru** ke folder yang sama dan pilih **Replace**.
+3. Buka dari alamat dan browser yang biasa digunakan, lalu tekan **Ctrl+F5**.
 
-7. **Popup Dialog Cerita Setiap Menuruni Tangga**:
-   - Setiap kali mengalahkan bos lantai dan menuruni tangga, muncul dialog narasi sinematik yang melanjutkan lore game v1:
-     - Lantai 1 ➔ 2: *Pita Rambut yang Membeku (Menuju Reruntuhan Beku Sang Dark King)*
-     - Lantai 2 ➔ 3: *Menara Segel Surya (Menuju Labirin Mantra Gelap Sang Evil Sorcerer)*
-     - Lantai 3 ➔ 4: *Lembah Peti Tulang (Menuju Pekuburan Purba Sang Ancient Lich)*
-     - Lantai 4 ➔ 5: *Di Depan Singgasana Hampa (Kedalaman Terakhir Sang Shadow Emperor)*
+Paket lengkap sudah mencakup pembaruan sebelumnya. Mengunduh ZIP saja tidak mengubah folder game.
 
-8. **Fitur Candu (Addictive Game Hooks)**:
-   - **Hades-Style Level-Up Boon Selection**: Setiap naik level, pemain memilih 1 dari 3 kartu Berkat Surya ilahi (total 12 Berkat unik: Bilah Percikan Surya, Gema Kritis Fajar, Lifesteal Vampiric, Sedotan Esensi Jiwa AP, dll).
-   - **Guci Keramik Pecah & Loot Beam**: Guci kuno di lorong labirin dapat dihancurkan dengan tombol **E** untuk memperoleh koin emas dan memancarkan pilar cahaya vertikal berkilau ala Diablo.
-   - **Musuh Elite & Glowing Auras**: Monster memiliki peluang 28% muncul sebagai varian Elite (*Bersisik Bara*, *Bayangan Cepat*, *Batu Karang*) dengan aura visual bercahaya dan hadiah EXP/Gold lebih tinggi.
+Save berada di **localStorage browser**, bukan di ZIP. Gunakan browser/profil dan alamat yang sama. Berpindah dari `file://` ke `http://localhost:3000`, mengganti port, memakai mode privat, atau menghapus data situs dapat membuat save lama tidak tersedia di alamat tersebut.
 
-9. **Sistem Perlengkapan & Efek Set Relik**:
-   - Slot perlengkapan: Senjata Utama, Senjata Kiri/Perisai, Zirah Pelindung, dan Relik/Cincin.
-   - **Set Darah Abadi (Blood Set)**: Lifesteal & memicu Stance Break memulihkan HP seketika.
-   - **Set Bayangan Jurang (Shadow Set)**: Peningkatan Dodge & Critical Hit.
-   - **Set Benteng Abadi (Bastion Set)**: Peningkatan pertahanan tebal & kebal stagger.
+- Save lama mempertahankan equipment, pembelian skill, dan SP.
+- Stat dihitung ulang memakai balancing terbaru. Eliksir lama di atas lima kali dihitung sebagai lima kali.
+- Migrasi skill mempertahankan hotbar menurut aturan lama; skill yang dahulu tertimpa tetap dimiliki dan bisa dipasang kembali.
+- Continue mengingat lantai terakhir. Tata ruang dan encounter dibuat ulang; posisi serta giliran combat tidak disimpan secara persis.
 
-10. **Audio Sintesis Prosedural (Web Audio API)**:
-    - Tidak memerlukan koneksi internet atau download file MP3/WAV besar yang rentan gagal dimuat.
-    - Suara langkah kaki, tebasan bilah pedang, tangkisan perisai, sihir api & petir, pecahan guci keramik, lonceng berkat naik level, dan dengungan atmosferik ruang bawah tanah disintesis secara real-time.
+## Kontrol
 
-11. **100% Offline Compatible**:
-    - Seluruh pustaka 3D Three.js (`three.min.js`) telah disimpan secara lokal di dalam folder. Game dapat dijalankan langsung tanpa koneksi internet sama sekali.
+| Tombol / aksi | Fungsi |
+| --- | --- |
+| WASD / tombol panah | Bergerak; saat combat, langkah per petak memakai AP |
+| Q / R | Memutar arah pandang 90 derajat |
+| Tahan klik kanan + geser | Melihat sekeliling |
+| E | Interaksi saat eksplorasi: guci, peti, NPC, prasasti, altar, tangga |
+| C / K | Menu karakter dan skill tree saat eksplorasi |
+| I | Perlengkapan dan tas saat eksplorasi |
+| 1–5 | Memilih skill hotbar saat giliran pemain |
+| Klik musuh / penanda target, F, Enter | Menyerang target aktif; dapat mendekat bila diperlukan |
+| Tab | Mengganti target dan menghadapnya saat giliran pemain |
+| G | Kuda-kuda bertahan, 1 AP |
+| 6 | Flask saat eksplorasi atau giliran pemain |
+| Spasi | Mengakhiri giliran; sisa AP memberi Guard |
 
----
+Menekan **1–5** dapat langsung menyerang jika hanya satu musuh berada dalam jangkauan. Skill untuk diri sendiri langsung digunakan. Biaya AP, cooldown, dan syarat adrenaline mengikuti skill terpasang, bukan nomor slot semata.
 
-## 🎮 Kontrol Permainan
+Gerakan eksplorasi bebas. Dalam combat, satu langkah keyboard ke petak tetangga memakai **1 AP**; aksi mendekat otomatis dihitung oleh sistem pergerakan combat. Kamera tidak berpindah ke isometrik. Roda mouse bukan kontrol zoom gameplay.
 
-### Mode Eksplorasi (Jalan Bebas):
-| Tombol | Fungsi |
-|---|---|
-| **W, A, S, D** / **Panah** | Berjalan ke segala arah |
-| **Q / R** | Memutar kamera isometrik 45° ke kiri / kanan |
-| **Klik Kanan + Geser Mouse** | Memutar kamera secara bebas |
-| **Scroll Roda Mouse** | Zoom in / Zoom out kamera |
-| **E** | Berinteraksi (Buka Peti, Berdoa di Altar, Baca Prasasti, Masuk Tangga) |
-| **I** | Membuka Tas & Manajemen Perlengkapan (Inventory) |
-| **C** | Membuka Status & Profil Karakter |
+Gunakan tombol **Peta**, **Bestiari**, **Tampilan**, dan suara pada HUD untuk fungsi terkait.
 
-### Mode Pertarungan Taktis:
-| Tombol / Aksi | Fungsi |
-|---|---|
-| **Klik Petak Biru** | Melangkah ke petak target (Konsumsi 1 AP tiap 2 petak) |
-| **Angka 1** | Serangan Dasar (1 AP) |
-| **Angka 2** | Skill Kelas 1 (2 AP, misal: Crushing Blow / Fireball / Flash Strike) |
-| **Angka 3** | Skill Kelas 2 (2 AP, misal: Shield Slam / Frost Nova / Smoke Screen) |
-| **Angka 4** | Kuda-Kuda Pertahanan (1 AP, misal: Bastion Brace / Mana Shield) |
-| **Angka 5** | Ultimate Finisher (3 AP, butuh 100 Adrenaline) |
-| **G / Tombol Kuda-Kuda** | Kuda-Kuda Kokoh / Tactical Guard (1 AP • +10 DEF, +20 Poise) |
-| **Angka 6 / Tombol Flask** | Minum Lentera Flask (Pulihkan HP & Poise) |
-| **Spasi / Tombol Selesai** | Akhiri Giliran Anda (Sisa AP otomatis dialihkan ke Guard DEF!) |
-| **C / K** | Buka Menu Profil & Rangkaian Skill Tree Interaktif |
-| **I** | Buka Tas & Perlengkapan Inventory |
+## Empat kelas dan skill tree
 
----
+| Kelas | Tiga jalur |
+| --- | --- |
+| Vanguard / Warrior | Bastion, Berserker, Commander |
+| Arcanist / Mage | Elementalist, Spellblade, Hexbound |
+| Skirmisher / Rogue | Shadow Stalker, Duelist, Bladedancer |
+| Ranger / Archer | Deadeye, Trapmaster, Windrunner |
 
-## 🚀 Cara Menjalankan Game
+Setiap kelas mempunyai **12 node**: tiga jalur, masing-masing empat tingkatan. Total **48 node** pada empat kelas.
 
-Tersedia beberapa cara mudah untuk langsung memainkan game ini:
+### Membuka dan memasang
 
-### Cara 1: Langsung Klik Dua Kali (Rekomendasi)
-- Cukup klik dua kali file **`play.bat`** di dalam folder `G:\My Drive\A2 - Game v2\`.
-- Game akan langsung terbuka di browser bawaan Windows Anda.
+1. Buka **Karakter**, periksa SP dan prasyarat node.
+2. Pilih **Buka** untuk menambah skill ke koleksi. Pembelian tidak mengganti hotbar otomatis.
+3. Untuk skill aktif, pilih **Pasang di Slot X**.
+4. Periksa skill lama dan baru, lalu pilih **Ganti skill** atau **Batal**.
 
-### Cara 2: Buka File HTML Langsung
-- Klik kanan file **`index.html`** -> **Open with** -> Pilih browser Anda (Google Chrome, Microsoft Edge, Mozilla Firefox, dll).
+Skill hanya dapat dipasang pada slot yang sesuai. Ada lima slot hotbar. **Pakai skill dasar** mengembalikan isi slot tanpa menghapus pembelian.
 
-### Cara 3: Menggunakan Server Lokal (Opsional)
-- Klik dua kali file **`play_server.bat`** (akan menyalakan server lokal di `http://localhost:3000`).
+Semua pasif yang dibuka berlaku otomatis. Investasi lintas jalur disebut **Build Campuran**; jumlah node per jalur serta daftar **Pasif Aktif** terlihat di menu.
 
----
+Status dibedakan menjadi **Dimiliki**, **Terpasang**, **Pasif Aktif**, dan persyaratan membuka. Detail bisa dibuka dengan klik/keyboard. Header SP tetap terlihat saat menggulir.
 
-## 📁 Struktur Berkas
+Pembelian, pemasangan, dan reset dilakukan di luar combat. **Reset Tree** mengembalikan biaya SP node dan memulihkan hotbar dasar.
 
+### Mekanik penting
+
+- **Vanish:** dodge maksimal 60% hingga awal giliran berikutnya, bukan kebal atau tidak bisa ditargetkan.
+- **Chain:** skill serangan berbeda menambah satu stack; mengulang skill memutus rantai. Empat stack memicu pengurangan cooldown sekali, lalu stack habis. Tidak memberi movement tambahan.
+- **Riposte:** kuda-kuda memberi dua token, dodge berhasil memberi satu; maksimal tiga. Satu token membalas serangan setelah pemain terkena hit dan masih hidup.
+- **Gale Agility:** dodge berhasil memberi AP dan pengurangan cooldown sesuai pasif.
+- **Melt:** Es lalu Api; pengurangan DEF memakai elemen sebelumnya.
+- **Eksekusi:** boss menerima damage, bukan langsung mati akibat eksekusi.
+
+Detail tiap build tersedia pada mekanik jalur dan kartu skill.
+
+## Combat dan balancing
+
+Combat memakai AP, jangkauan, arah hadap, Flank/Backstab, Poise, dan Stance Break. Perhatikan giliran, penanda target, serta biaya skill. Petak abu menunjukkan gerak; merah menunjukkan area serangan.
+
+- DEF mengurangi damage secara bertahap; mitigasi dari rumus armor maksimal 75%.
+- Guard berakhir di awal giliran berikutnya. Barrier efektif maksimal 30% max HP.
+- Lifesteal serangan memakai HP yang benar-benar hilang: maksimal 30% damage aktual dan 8% max HP per serangan. Pemulihan lain punya aturan tersendiri.
+- Flask normal: 30% max HP, maksimal 110. Biaya combat 2 AP.
+- Boon Eliksir Surya Murni: flask combat menjadi 40%, maksimal 140, dengan refund 1 AP. Flask eksplorasi tetap memakai aturan normal.
+- Eliksir permanen: +25 max HP per pembelian, maksimal lima; harga mulai 90 gold dan naik 70 setiap pembelian. Tidak menambah ATK atau DEF.
+- Musuh meningkat menurut kedalaman dan kontrak, bukan otomatis mengikuti equipment pemain.
+
+Lantai lanjutan berisi kelompok kecil dengan peran pemanah, penyembuh, dan pemecah pertahanan. Boss serta pemecah segel dapat membidik petak sebelum hantaman besar. Saat muncul **BAHAYA: PINDAH PETAK**, bergerak sebelum giliran musuh berikutnya.
+
+Equipment memiliki slot senjata utama, tangan kiri, armor, dan relik. Tempa item dan bonus set tetap tersedia.
+
+## Rarity item
+
+| Rarity | Warna border | Cahaya |
+| --- | --- | --- |
+| Common | Abu-abu | Sangat redup |
+| Uncommon | Abu kebiruan | Redup |
+| Rare | Biru | Sedang |
+| Epic | Ungu | Terang |
+| Legendary | Emas | Lebih terang |
+| Mythic | Merah | Paling terang |
+
+Border bercahaya berlaku pada equipment, tas, toko, hasil loot, dan meja tempa. Efeknya CSS statis, tanpa animasi kontinu atau lampu 3D tambahan.
+
+## Delapan bab dan Kontrak Bara
+
+1. Gerbang Abu
+2. Reruntuhan Beku
+3. Labirin Segel
+4. Makam Purba
+5. Singgasana Hampa
+6. Arsip Nama yang Hilang
+7. Jantung Tungku Gerhana
+8. Fajar di Bawah Jurang
+
+Cerita disampaikan melalui dialog turun lantai, prasasti, dan NPC. Liora berperan aktif membantu tawanan; singgasana bukan akhir perjalanan. Bab kedelapan memiliki epilog. Setelah selesai, pemain bisa kembali ke Gerbang Abu dengan equipment saat ini.
+
+Saat turun ke lantai berikutnya:
+
+| Pilihan | Konsekuensi |
+| --- | --- |
+| Jalur normal | Memulihkan 20% max HP saat turun |
+| Kontrak Bara | Musuh +20% ATK/+15% HP; hadiah combat +50% gold/+30% EXP |
+
+Boss kontrak memberi meterai khusus dengan keuntungan sekaligus pengurangan stat. Kontrak berlaku pada lantai tujuan dan ditampilkan di subtitle lantai. Pemain yang memilih kontrak tidak mendapat pemulihan jalur normal.
+
+## Tampilan dan performa
+
+- Dungeon memakai renderer 3D bergaya pixel; karakter dan banyak makhluk memakai atlas sprite.
+- Tangan/senjata bergerak saat berjalan; tersedia efek serangan dan kematian musuh.
+- Menu memakai nuansa gelap merah–abu; warna dunia dan aset dipertahankan.
+- Menu **Tampilan** menyediakan pilihan kualitas dan gerakan visual.
+- Peran musuh tambahan memakai aset yang tersedia. Kelompok dibatasi agar tetap ringan.
+
+## Struktur proyek
+
+```text
+index.html                 Halaman game dan modal
+play.bat                   Membuka index.html
+play_server.bat             Server Node.js di port 3000
+server.js                  Server file lokal
+three.min.js               Pustaka grafis lokal
+assets/                    Atlas karakter, tangan, font, gambar
+css/                       UI, hotbar, menu, skill tree, rarity
+js/rpg-data.js             Data dasar kelas, item, musuh, skill, cerita
+js/abyss-expansion.js       Balancing, bab tambahan, kontrak, relik
+js/inventory.js             Equipment, stat, pembelian skill, save
+js/skill-loadout.js         Pemasangan skill dan menu tree
+js/combat.js                Giliran, AP, damage, status, AI
+js/dungeon.js               Dungeon dan penempatan encounter
+js/main.js                  Integrasi, kamera, input, UI
+js/retro.js                 Presentasi pixel
+js/presentation.js         Efek dan kualitas visual
+js/fps-hands.js             Tangan/senjata orang pertama
+js/attack-effects.js        Efek serangan
+js/death-effects.js         Efek kematian
+js/combat-guide.js          Target dan panduan combat
+js/audio.js                Audio prosedural
+UPDATE-*.txt               Catatan pembaruan historis
 ```
-G:\My Drive\A2 - Game v2\
-├── index.html          # Halaman utama game & antarmuka HUD 3D
-├── play.bat            # Launcher sekali klik
-├── play_server.bat     # Launcher lokal server (opsional)
-├── server.js           # Server Node.js ringan (tanpa dependensi luar)
-├── three.min.js        # Engine grafis 3D Three.js lokal (Offline-ready)
-├── README.md           # Panduan lengkap ini
-├── css/
-│   └── game.css        # Tata letak antarmuka Dark Fantasy HUD & Modals
-└── js/
-    ├── audio.js        # Mesin suara prosedural Web Audio API
-    ├── rpg-data.js     # Data Kelas, Monster, Bos, Set, Lore Liora & Item
-    ├── models.js       # Pembuat model 3D prosedural karakter, musuh & prop
-    ├── dungeon.js      # Generator labirin ruang 3D & algoritma pathfinding A*
-    ├── inventory.js    # Sistem tas perlengkapan, hitung stat & penyimpanan simpanan
-    ├── combat.js       # Mesin giliran taktis isometrik, AP, Poise & AI musuh
-    └── main.js         # Loop utama game, penanganan input & kamera isometrik
-```
 
-*Selamat bertualang di kedalaman Abyss dan temukan adikmu, Liora!*
+Urutan script penting: data sebelum ekspansi, inventory sebelum loadout, dan `main.js` setelah modul pendukung. Untuk aturan yang berubah, gunakan README serta implementasi terbaru; catatan UPDATE lama dapat menggambarkan versi terdahulu.
+
+## Status pengujian
+
+Pemeriksaan mencakup sintaks JavaScript, 48 node empat kelas, pemasangan/migrasi save, refund SP, render menu, serta warna rarity. Pengujian balancing sebelumnya mencakup pemuatan delapan lantai/boss, 20 skill dasar empat kelas, 96 peta acak, pemulihan HP, dan hantaman bertelegraph.
+
+Ini bukan playthrough lengkap seluruh kombinasi build. Kurva kesulitan, pacing cerita, dan interaksi build lanjutan masih perlu dievaluasi melalui permainan penuh.

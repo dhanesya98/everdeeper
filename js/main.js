@@ -458,6 +458,7 @@ window.EverDeeperV2 = (function() {
       inventory.saveToStorage();
       updateHUD();
     } else if (ent.type === 'npc') {
+      ent.interacted = true;
       ent.explored = true;
       inventory.saveToStorage();
       showNpcModal(ent.npcId);
@@ -521,6 +522,7 @@ window.EverDeeperV2 = (function() {
       updateHUD();
       showNotification(`${GameIcons.svg('sun')} Altar Surya memulihkan seluruh luka & mengisi 2 Lentera Flask!`);
     } else if (ent.type === 'lore') {
+      ent.interacted = true;
       ent.explored = true;
       inventory.saveToStorage();
       showLoreModal(ent.loreIndex);
@@ -1628,26 +1630,25 @@ window.EverDeeperV2 = (function() {
     if (bossDef) {
       questItems.push({
         done: bossDefeated,
-        label: `Kalahkan Bos: ${bossDef.name}`,
-        tag: `Lantai ${floorNum}`
+        label: `Bos: ${bossDef.name.split(' (')[0]}`,
+        tag: `Lt. ${floorNum}`
       });
     }
     if (floorNum >= 6 && window.FinalChapters && typeof FinalChapters.status === 'function') {
       const doneArr = FinalChapters.progress ? FinalChapters.progress(inventory, floorNum) : [];
       const chapDone = doneArr.length >= 3;
-      const chapText = FinalChapters.status(inventory, floorNum) || `Segel Kapitel Lantai ${floorNum}`;
       questItems.push({
         done: chapDone,
-        label: chapText,
+        label: `Segel Bab ${floorNum}`,
         tag: `${doneArr.length}/3`
       });
     }
     questItems.push({
       done: false,
       label: floorNum < (RPG_DATA.FLOORS ? RPG_DATA.FLOORS.length : 8)
-        ? (bossDefeated ? 'Turuni Tangga menuju lantai berikutnya' : 'Buka segel tangga & turuni Abyss')
-        : (bossDefeated ? 'Selamatkan Liora di Singgasana!' : 'Hadapi Malakor & bebaskan Liora'),
-      tag: bossDefeated ? 'SIAP' : 'TERKUNCI'
+        ? 'Turuni Tangga Abyss'
+        : 'Bebaskan Liora',
+      tag: bossDefeated ? 'Siap' : 'Terkunci'
     });
 
     questListEl.innerHTML = questItems.map(q => `
@@ -1666,44 +1667,44 @@ window.EverDeeperV2 = (function() {
     const defeatedMonsters = monsters.filter(e => e.defeated).length;
 
     const npcs = activeEntities ? activeEntities.filter(e => e.type === 'npc') : [];
-    const talkedNpcs = npcs.filter(e => e.explored).length;
+    const talkedNpcs = npcs.filter(e => e.interacted).length;
 
     const lores = activeEntities ? activeEntities.filter(e => e.type === 'lore') : [];
-    const readLores = lores.filter(e => e.explored).length;
+    const readLores = lores.filter(e => e.interacted).length;
 
     const todoItems = [];
     if (monsters.length > 0) {
       todoItems.push({
         done: defeatedMonsters >= monsters.length,
-        label: 'Bersihkan Penjaga Abyss',
+        label: 'Penjaga Abyss',
         tag: `${defeatedMonsters}/${monsters.length}`
       });
     }
     if (chests.length > 0) {
       todoItems.push({
         done: openedChests >= chests.length,
-        label: 'Buka Peti Harta Lantai Ini',
+        label: 'Peti Harta',
         tag: `${openedChests}/${chests.length}`
       });
     }
     if (lores.length > 0) {
       todoItems.push({
         done: readLores >= lores.length,
-        label: 'Baca Prasasti Kenangan Liora',
+        label: 'Prasasti Liora',
         tag: `${readLores}/${lores.length}`
       });
     }
     if (npcs.length > 0) {
       todoItems.push({
         done: talkedNpcs > 0,
-        label: 'Kunjungi NPC Sanctuary / Pedagang',
+        label: 'NPC Sanctuary',
         tag: `${talkedNpcs}/${npcs.length}`
       });
     }
     if (inventory.skillPoints > 0) {
       todoItems.push({
         done: false,
-        label: `Gunakan Poin Skill (C)`,
+        label: 'Poin Skill [C]',
         tag: `${inventory.skillPoints} SP`
       });
     }
@@ -1724,8 +1725,8 @@ window.EverDeeperV2 = (function() {
       bountyListEl.innerHTML = `
         <div class="hud-obj-item ${isDone ? 'is-done' : 'is-bounty'}" style="cursor:pointer;" title="Klik untuk melihat poster buronan">
           <span class="hud-obj-check">${isDone ? '✓' : '⚔'}</span>
-          <span class="hud-obj-text">${bDef.name} <small style="color:#a8998e;">(${bDef.title})</small></span>
-          <span class="hud-obj-badge">${isDone ? 'SELESAI' : `+${rewardGold}G`}</span>
+          <span class="hud-obj-text">${bDef.name.split(' (')[0]}</span>
+          <span class="hud-obj-badge">${isDone ? 'Selesai' : `+${rewardGold}G`}</span>
         </div>
       `;
       bountyListEl.onclick = () => showBountyBoardModal();
@@ -2104,21 +2105,10 @@ window.EverDeeperV2 = (function() {
           <div class="bento-chips-row">${statChips}</div>
         </div>
         <div class="item-actions-row" style="margin-top:6px;">
-          <button class="equip-btn" style="flex:1;" ${usable ? '' : 'disabled'}>${usable ? 'Pasang' : 'Class terkunci'}</button>
+          <button class="equip-btn" style="flex:1;" ${usable ? '' : 'disabled'} title="Class: ${classLabel}">${usable ? 'Pasang' : classLabel}</button>
           <button class="sell-btn" title="Jual barang">${GameIcons.svg('coin', 'fantasy-icon icon-xs')} +${sellVal}</button>
         </div>
       `;
-
-      const requirement = document.createElement('div');
-      requirement.textContent = 'Class: ' + classLabel;
-      requirement.style.cssText = 'font-size:11px;color:#c9bdb5;margin-top:8px';
-      card.appendChild(requirement);
-      if (RPG_DATA.CRAFT_RECIPES.some(recipe => recipe.ingredients.includes(item.id))) {
-        const hint = document.createElement('p');
-        hint.style.cssText = 'font-size:11px;color:#c9bdb5';
-        hint.textContent = 'Bahan resep relik — bawa ke Kaelen di perkemahan awal.';
-        card.appendChild(hint);
-      }
 
       card.onmouseenter = (e) => { if (!e.target.closest('details')) showItemTooltip(e, item, 'bag'); };
       card.onmousemove = (e) => { if (e.target.closest('details')) hideBentoTooltip(); else positionBentoTooltip(e); };
@@ -2166,18 +2156,39 @@ window.EverDeeperV2 = (function() {
     `;
 
     // Active Sets
+    const setSection = document.getElementById('invSetsSection');
     const setList = document.getElementById('invSets');
-    setList.innerHTML = '';
-    if (inventory.activeSetBonuses.length === 0) {
-      setList.innerHTML = '<span class="muted" style="font-size:12px; color:#8c7378;">Tidak ada efek set aktif. Kumpulkan 2 atau 4 perlengkapan dari set yang sama!</span>';
-    } else {
-      inventory.activeSetBonuses.forEach(b => {
-        const item = document.createElement('div');
-        item.className = 'set-badge';
-        item.innerHTML = `${GameIcons.svg(b.set === 'blood' ? 'blood' : (b.set === 'shadow' ? 'shadow' : 'fortress'), 'fantasy-icon icon-xs')} <b>${b.name} (${b.tier}P):</b> ${b.desc}`;
-        setList.appendChild(item);
-      });
+    if (setList) {
+      setList.innerHTML = '';
+      if (inventory.activeSetBonuses.length === 0) {
+        if (setSection) setSection.style.display = 'none';
+      } else {
+        if (setSection) setSection.style.display = 'block';
+        inventory.activeSetBonuses.forEach(b => {
+          const item = document.createElement('div');
+          item.className = 'set-badge';
+          item.innerHTML = `${GameIcons.svg(b.set === 'blood' ? 'blood' : (b.set === 'shadow' ? 'shadow' : 'fortress'), 'fantasy-icon icon-xs')} <b>${b.name} (${b.tier}P):</b> ${b.desc}`;
+          setList.appendChild(item);
+        });
+      }
     }
+  }
+
+  function renderCharDetailsStrip(stats) {
+    const el = document.getElementById('charDetails');
+    if (!el) return;
+    el.innerHTML = `
+      <span>HP <b>${stats.maxHp}</b></span>
+      <span>Poise <b>${stats.maxPoise}</b></span>
+      <span>ATK <b>${stats.atk}</b></span>
+      <span>DEF <b>${stats.def}</b></span>
+      <span>STR <b>${stats.str}</b></span>
+      <span>AGI <b>${stats.agi}</b></span>
+      <span>INT <b>${stats.int}</b></span>
+      <span>Crit <b>${Math.round(stats.critChance * 100)}%</b></span>
+      <span>Dodge <b>${Math.round((stats.dodgeChance || 0) * 100)}%</b></span>
+      <span>Gerak <b>${stats.moveRange}</b></span>
+    `;
   }
 
   function toggleCharacterModal() {
@@ -2188,16 +2199,11 @@ window.EverDeeperV2 = (function() {
     if (!isVisible) {
       const cDef = RPG_DATA.CLASSES[inventory.heroClassId];
       const stats = inventory.getComputedStats();
-      document.getElementById('charClassName').textContent = cDef.name;
+      document.getElementById('charClassName').textContent = cDef.name.split(' (')[0];
       document.getElementById('charTitle').textContent = cDef.title;
       document.getElementById('charDesc').textContent = cDef.desc;
-      document.getElementById('charLvl').textContent = `Level ${inventory.level} (EXP: ${inventory.exp}/${inventory.expNext})`;
-      document.getElementById('charDetails').innerHTML = `
-        <div>Max HP: <b>${stats.maxHp}</b> | Max Poise: <b>${stats.maxPoise}</b></div>
-        <div>ATK: <b>${stats.atk}</b> | DEF: <b>${stats.def}</b></div>
-        <div>STR: <b>${stats.str}</b> | AGI: <b>${stats.agi}</b> | INT: <b>${stats.int}</b></div>
-        <div>Crit: <b>${Math.round(stats.critChance * 100)}%</b> | Dodge: <b>${Math.round((stats.dodgeChance || 0) * 100)}%</b> | Gerak: <b>${stats.moveRange} petak</b></div>
-      `;
+      document.getElementById('charLvl').textContent = `Lv. ${inventory.level} (${inventory.exp}/${inventory.expNext} EXP)`;
+      renderCharDetailsStrip(stats);
 
       // Build Specialization Selector
       const builds = RPG_DATA.CLASS_BUILDS[inventory.heroClassId];
@@ -2241,15 +2247,18 @@ window.EverDeeperV2 = (function() {
         }
       }
 
-      // Acquired Boons List
+      // Acquired Boons List (minimalist chips, hidden if none)
+      const boonsSection = document.getElementById('charBoonsSection');
       const boonsList = document.getElementById('charBoonsList');
       if (boonsList) {
         if (inventory.boons.length === 0) {
-          boonsList.innerHTML = '<span class="muted">Belum ada Berkat Surya. Naikkan level untuk memilih berkat!</span>';
+          if (boonsSection) boonsSection.style.display = 'none';
+          boonsList.innerHTML = '';
         } else {
+          if (boonsSection) boonsSection.style.display = 'block';
           boonsList.innerHTML = inventory.boons.map(bId => {
             const b = RPG_DATA.LEVEL_UP_BOONS.find(x => x.id === bId);
-            return b ? `<div style="margin-bottom:6px; display:flex; align-items:center; gap:6px;">${GameIcons.svg(b.icon, 'fantasy-icon icon-xs')} <b>${b.name}:</b> <span>${b.desc}</span></div>` : '';
+            return b ? `<span class="char-boon-chip" title="${b.desc}">${GameIcons.svg(b.icon, 'fantasy-icon icon-xs')} ${b.name}</span>` : '';
           }).join('');
         }
       }
@@ -2276,13 +2285,7 @@ window.EverDeeperV2 = (function() {
     showNotification(`${GameIcons.svg('reset')} Seluruh Skill Tree telah di-reset! Semua Poin Skill dikembalikan.`);
     renderSkillTree();
     renderSkillButtons();
-    const stats = inventory.getComputedStats();
-    document.getElementById('charDetails').innerHTML = `
-      <div>Max HP: <b>${stats.maxHp}</b> | Max Poise: <b>${stats.maxPoise}</b></div>
-      <div>ATK: <b>${stats.atk}</b> | DEF: <b>${stats.def}</b></div>
-      <div>STR: <b>${stats.str}</b> | AGI: <b>${stats.agi}</b> | INT: <b>${stats.int}</b></div>
-      <div>Crit: <b>${Math.round(stats.critChance * 100)}%</b> | Dodge: <b>${Math.round((stats.dodgeChance || 0) * 100)}%</b> | Gerak: <b>${stats.moveRange} petak</b></div>
-    `;
+    renderCharDetailsStrip(inventory.getComputedStats());
     if (combat && combat.isActive) {
       combat.updateCombatUI();
     }

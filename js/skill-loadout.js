@@ -43,40 +43,55 @@
 window.SkillTreeUI={render(inv,{inCombat,refresh}){
  const root=document.getElementById('skillTreeContainer');if(!root)return;
  root.replaceChildren();root.classList.add('loadout-tree');
- const badge=document.getElementById('skillPointsBadge');if(badge)badge.textContent=inv.skillPoints+' POIN SKILL';
+ const badge=document.getElementById('skillPointsBadge');if(badge)badge.textContent=inv.skillPoints+' SP';
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
- const button=(label,action,disabled=false)=>{const n=el('button','tree-action',label);n.type='button';n.disabled=disabled;n.onclick=action;return n;};
+ const button=(label,action,disabled=false,cls='tree-action')=>{const n=el('button',cls,label);n.type='button';n.disabled=disabled;n.onclick=action;return n;};
+ const shortName=str=>String(str||'').split(' (')[0];
+ const shortSummary=str=>{const s=String(str||'').split(/(?<=[.!])\s/)[0];return s.length>68?s.slice(0,65)+'…':s;};
  const rerender=()=>{refresh();this.render(inv,{inCombat,refresh});};
  const branches=Object.values(RPG_DATA.SKILL_TREES[inv.heroClassId]);
- const summary=el('section','tree-loadout-summary');
- const counts=branches.map(b=>({b,count:b.nodes.filter(n=>inv.unlockedNodes.includes(n.id)).length}));
- summary.append(el('h3','',counts.filter(x=>x.count>0).length>1?'BUILD CAMPURAN':'JALUR KARAKTER'));
- summary.append(el('p','',counts.map(x=>(x.b.subclassName||x.b.name)+' '+x.count+'/4').join(' · ')));
- summary.append(el('p','',inCombat?'Pemasangan, pembelian, dan reset skill tersedia setelah combat.':'Membuka skill menambah koleksi. Pilih Pasang untuk mengganti skill di slot yang sesuai.'));
  const loadout=el('div','tree-loadout-slots');
- inv.getActiveSkills().forEach((s,i)=>{const box=el('div','tree-slot');box.append(el('small','','SLOT '+(i+1)),el('strong','',s.name));if(inv.skillLoadout?.[i])box.append(button('Pakai skill dasar',()=>{inv.restoreBaseSkill(i);rerender();},inCombat));loadout.append(box);});summary.append(loadout);
- const passiveNames=branches.flatMap(b=>b.nodes).filter(n=>n.type==='passive'&&inv.unlockedNodes.includes(n.id)).map(n=>n.name);
- const passives=el('details','tree-passives');passives.append(el('summary','','Pasif aktif ('+passiveNames.length+')'),el('p','',passiveNames.join(' · ')||'Belum ada pasif yang dibuka.'));summary.append(passives);root.append(summary);
+ inv.getActiveSkills().forEach((s,i)=>{
+  const box=el('div','tree-slot'+(inv.skillLoadout?.[i]?' is-custom':''));
+  box.title=(s.name||'')+'\n'+(s.desc||'');
+  const top=el('div','tree-slot-head');
+  top.append(el('small','','SLOT '+(i+1)));
+  if(inv.skillLoadout?.[i])top.append(button('↺',()=>{inv.restoreBaseSkill(i);rerender();},inCombat,'tree-slot-reset'));
+  box.append(top,el('strong','',shortName(s.name)));
+  loadout.append(box);
+ });
+ root.append(loadout);
  const grid=el('div','tree-branches');root.append(grid);
  for(const branch of branches){
-  const column=el('section','tree-branch');column.append(el('h3','',branch.subclassName||branch.name));
-  const mechanics=el('details','tree-mechanic');mechanics.append(el('summary','','Mekanik jalur'),el('p','',branch.mechanic?.desc||''));column.append(mechanics);
+  const unlockedCount=branch.nodes.filter(n=>inv.unlockedNodes.includes(n.id)).length;
+  const column=el('section','tree-branch');
+  const head=el('div','tree-branch-head');
+  head.title=branch.mechanic?.desc||'';
+  head.append(el('h3','',shortName(branch.subclassName||branch.name)),el('span','tree-branch-count',unlockedCount+'/4'));
+  column.append(head);
   for(const node of branch.nodes){
    const owned=inv.unlockedNodes.includes(node.id),installed=owned&&inv.skillLoadout?.[node.slotIdx]===node.id,can=inv.canUnlockNode(node.id),s=node.skillData;
    const card=el('article','tree-node '+(owned?'owned':can?'available':'locked'));
-   card.append(el('small','','TINGKAT '+node.tier+' · '+(node.type==='passive'?'PASIF':'SLOT '+(node.slotIdx+1))+' · '+(node.cost||1)+' SP'),el('h4','',node.name));
-   card.append(el('p','tree-effect',s?`${s.cost} AP · ${s.range===0?'Diri sendiri':s.range+' petak'} · Cooldown ${s.cooldown||0} giliran${s.adrenalineReq ? " · "+s.adrenalineReq+"% Adrenaline" : ""}`:((node.desc||'Pasif aktif setelah dibuka.').split(/(?<=[.!])\s/)[0])));
-   const detail=el('details','tree-detail');detail.append(el('summary','','Lihat efek dan aturan'),el('p','',node.desc||s?.desc||''));if(s?.conditionText)detail.append(el('p','',s.conditionText));
-   if(s)detail.append(el('p','tree-rule','Aturan bersama: lifesteal dari damage aktual, maksimal 30% damage / 8% HP per serangan. Dodge maksimal 60% dan berakhir di awal giliran berikutnya. Eksekusi boss menjadi damage, bukan mati instan.'));
-   card.append(detail);
-   if(owned){card.append(el('span','tree-state',node.type==='passive'?'PASIF AKTIF':installed?'TERPASANG · SLOT '+(node.slotIdx+1):'DIMILIKI'));
-    if(node.type==='active'&&!installed)card.append(button('Pasang di Slot '+(node.slotIdx+1),()=>{
-     if(card.querySelector('.tree-confirm'))return;
-     const confirm=el('div','tree-confirm');confirm.append(el('p','',inv.getActiveSkills()[node.slotIdx].name+' → '+s.name),button('Ganti skill',()=>{inv.equipSkillNode(node.id);rerender();}),button('Batal',()=>confirm.remove()));card.append(confirm);
-    },inCombat));
-   }else if(can)card.append(button('Buka · '+(node.cost||1)+' SP',()=>{if(inv.unlockSkillNode(node.id))rerender();},inCombat));
-   else card.append(el('span','tree-state',node.req&&!inv.unlockedNodes.includes(node.req)?'BUTUH: '+inv.findSkillNode(node.req)?.name:'BUTUH '+(node.cost||1)+' SP'));
+   const fullTip=[node.name,s?`${s.cost} AP · ${s.range===0?'Diri':s.range+' petak'} · CD ${s.cooldown||0}`:'Pasif',node.desc||s?.desc||'',s?.conditionText||''].filter(Boolean).join('\n');
+   card.title=fullTip;
+   const topRow=el('div','tree-node-top');
+   topRow.append(el('small','','T'+node.tier+' · '+(node.type==='passive'?'PASIF':'SLOT '+(node.slotIdx+1))));
+   if(owned){
+    if(node.type==='active'&&!installed){
+     topRow.append(button('Pasang',()=>{inv.equipSkillNode(node.id);rerender();},inCombat));
+    }else{
+     topRow.append(el('span','tree-state is-active',node.type==='passive'?'Aktif':'Terpasang'));
+    }
+   }else if(can){
+    topRow.append(button('Buka ('+(node.cost||1)+' SP)',()=>{if(inv.unlockSkillNode(node.id))rerender();},inCombat));
+   }else{
+    topRow.append(el('span','tree-state',node.req&&!inv.unlockedNodes.includes(node.req)?'Terkunci':'Butuh '+(node.cost||1)+' SP'));
+   }
+   card.append(topRow,el('h4','',shortName(node.name)));
+   const brief=s?`${s.cost} AP · ${s.range===0?'Diri':s.range+' petak'}${s.cooldown?` · CD ${s.cooldown}`:''}`:shortSummary(node.desc||'Pasif aktif otomatis.');
+   card.append(el('p','tree-effect',brief));
    column.append(card);
-  }grid.append(column);
+  }
+  grid.append(column);
  }
 }};

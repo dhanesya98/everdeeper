@@ -54,30 +54,26 @@ window.RelicCrafting = (() => {
     return {success:true,item:result};
   }
   function render(root,inv,ctx) {
-    root.style.cssText='margin:12px 0 24px;display:grid;gap:16px';
-    const heading=document.createElement('h3');heading.textContent='Tungku Relik & Tempa Mimic';root.appendChild(heading);
-    const intro=document.createElement('p');intro.textContent='Gabungkan dua bahan dari tas. Taring + Inti Mimic menjadi senjata, Karapas + Inti menjadi armor khusus class. Lidah Keberuntungan + Inti menjadi Meterai universal. Tempa tertinggi diwariskan (maks. +10); stat hasil mengikuti pratinjau. Lepas dahulu bahan yang sedang dipakai.';intro.style.cssText='font-size:12px;line-height:1.6';root.appendChild(intro);
+    root.style.cssText='margin:10px 0 8px;display:grid;gap:8px';
+    const heading=document.createElement('div');heading.className='modal-section-label';heading.textContent='Tungku Relik & Tempa Mimic';root.appendChild(heading);
+    const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px';root.appendChild(grid);
     for (const recipe of recipes) {
       if(recipe.result.classReq&&recipe.result.classReq!==inv.heroClassId)continue;
       const state=preview(inv,recipe.id),item=recipe.result;
-      const card=document.createElement('div');card.className='forge-bench-card rarity-'+item.rarity;card.style.cssText='padding:16px;text-align:left;display:grid;gap:10px';
-      const title=document.createElement('strong');title.textContent=item.name+' · '+item.rarity.toUpperCase();card.appendChild(title);
-      const restriction=document.createElement('div');restriction.textContent=(item.slot==='weapon'?'Senjata':item.slot==='armor'?'Armor':'Relik')+' · '+(item.classReq?RPG_DATA.CLASSES[item.classReq].name:'Semua class');restriction.style.fontSize='12px';card.appendChild(restriction);
-      const ingredients=document.createElement('div');ingredients.textContent=names(recipe.ingredients).map((name,i)=>name+' ['+(state.materials[i]?'siap':'belum di tas')+']').join(' + ');card.appendChild(ingredients);
-      const stats=document.createElement('div');stats.textContent=['atk','def','hp','str','int','agi','poise','crit','goldBonus'].filter(key=>item[key]).map(key=>'+'+(['crit','goldBonus'].includes(key)?Math.round(item[key]*100)+'%':item[key])+' '+(key==='goldBonus'?'GOLD':key.toUpperCase())).join(' · ');card.appendChild(stats);
-      const detail=document.createElement('div');detail.textContent=item.desc;detail.style.cssText='font-size:12px;line-height:1.5;color:#c7beba';card.appendChild(detail);
-      const note=document.createElement('div');note.textContent=state.reason || 'Bahan akan habis. Tempa hasil: +'+Math.max(...state.materials.map(item=>Math.min(10,item.forgeLevel||0)))+'.';note.style.fontSize='12px';card.appendChild(note);
-      let armed=false;
-      const button=document.createElement('button');button.className='hud-btn';button.style.cssText='white-space:normal;padding:10px';button.textContent='Craft · '+recipe.cost+' Gold';button.disabled=!state.success||ctx.inCombat();
-      const cancel=document.createElement('button');cancel.className='hud-btn';cancel.textContent='Batal';cancel.style.display='none';
-      cancel.onclick=()=>{armed=false;cancel.style.display='none';button.textContent='Craft · '+recipe.cost+' Gold';};
+      const card=document.createElement('div');card.className='forge-bench-card rarity-'+item.rarity;card.style.cssText='padding:10px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:6px';
+      card.title=item.desc+'\n'+(state.reason||'');
+      const top=document.createElement('div');
+      const title=document.createElement('strong');title.style.cssText='font-size:12px;display:block;color:#eee';title.textContent=item.name;top.appendChild(title);
+      const stats=document.createElement('div');stats.style.cssText='font-size:11px;color:#b8b0aa;margin-top:2px';stats.textContent=['atk','def','hp','str','int','agi','poise','crit','goldBonus'].filter(key=>item[key]).map(key=>'+'+(['crit','goldBonus'].includes(key)?Math.round(item[key]*100)+'%':item[key])+' '+(key==='goldBonus'?'GOLD':key.toUpperCase())).join(' · ');top.appendChild(stats);
+      const ingredients=document.createElement('div');ingredients.style.cssText='font-size:10.5px;color:#9a908a;margin-top:4px';ingredients.textContent=names(recipe.ingredients).map((name,i)=>name+' '+(state.materials[i]?'✓':'✗')).join(' + ');top.appendChild(ingredients);
+      card.appendChild(top);
+      const button=document.createElement('button');button.className='hud-btn';button.style.cssText='padding:5px 8px;font-size:11px;width:100%';button.textContent='Tempa ('+recipe.cost+'G)';button.disabled=!state.success||ctx.inCombat();
       button.onclick=()=>{
-        if (!armed) {armed=true;cancel.style.display='block';button.textContent='Konfirmasi: habiskan kedua bahan + '+recipe.cost+' Gold';return;}
         const result=craft(inv,recipe.id,{npcId:ctx.npcId,inCombat:ctx.inCombat(),atStation:ctx.isPresent()});
-        ctx.notify(result.success ? result.item.name+' berhasil diciptakan dan masuk tas!' : result.reason, result.success ? result.item : null);
+        ctx.notify(result.success ? result.item.name+' berhasil diciptakan!' : result.reason, result.success ? result.item : null);
         ctx.refresh();
       };
-      card.append(button,cancel);root.appendChild(card);
+      card.appendChild(button);grid.appendChild(card);
     }
   }
   function mimicDrop(inv){const index=(inv.mimicVictories||0)%mimicParts.length;inv.mimicVictories=(inv.mimicVictories||0)+1;return {...mimicParts[index]};}

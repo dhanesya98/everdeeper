@@ -9,3 +9,15 @@
 .modal-overlay .modal-window :is(.equip-slot,.bag-item-card,.loot-rarity)[class*="rarity-"] .rarity-pill{color:var(--rarity-edge)!important;border-color:var(--rarity-edge)!important;background:#171111!important}
 .loot-rarity{padding:10px 12px;margin:10px 3px!important;list-style:none}
 .modal-overlay .modal-window .bag-grid{gap:18px;padding:4px}
+
+/* Acquisition toast at eye level; transparent and never captures aiming input. */
+#notificationBox.reward-notification {
+  position:fixed;top:44%;left:50%;right:auto;bottom:auto;
+  width:max-content;max-width:min(560px,calc(100vw - 40px));box-sizing:border-box;
+  padding:10px 16px;text-align:center;font-size:13px;line-height:1.6;
+  background:rgba(12,10,10,.22)!important;border:none!important;
+  box-shadow:none!important;text-shadow:0 1px 3px #000,0 0 6px #000;
+  pointer-events:none;transition:opacity .25s ease;overflow-wrap:anywhere;
+}
+#notificationBox.reward-notification strong {font-weight:600}
+@media (prefers-reduced-motion:reduce){#notificationBox.reward-notification{transition:none}}

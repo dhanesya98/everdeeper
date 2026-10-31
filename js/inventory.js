@@ -22,6 +22,7 @@ window.GameInventory = (function() {
       };
 
       this.items = []; // Inventory bag
+      this.chapterObjectives = {};
       this.activeSetBonuses = [];
       this.chosenBuild = 'buildA';
       this.passives = [];
@@ -30,7 +31,8 @@ window.GameInventory = (function() {
       this.skillLoadout = {}; // Unlocked Skill Tree node IDs
       this.boons = []; // Level-up blessing cards
       this.forgeLevel = 0; // Blacksmith weapon tempering level
-      this.floorShops = {}; // Per-floor shop stock cache
+      this.floorShops = {};
+      this.blackMarkets = {}; // Per-floor shop stock cache
       this.pactBonuses = { maxHp: 0, atk: 0, critChance: 0, moveRange: 0, maxPoise: 0, maxAp: 0 };
       this.activePacts = [];
       this.isVulnerableNextCombat = false;
@@ -41,6 +43,7 @@ window.GameInventory = (function() {
     }
 
     reset(heroClassId) {
+      this.chapterObjectives = {};
       this.abyssContract = 0;
       this.savedDepth = 0;
       delete this.currentHp;
@@ -62,6 +65,7 @@ window.GameInventory = (function() {
       this.boons = [];
       this.forgeLevel = 0;
       this.floorShops = {};
+      this.blackMarkets = {};
       this.pactBonuses = { maxHp: 0, atk: 0, critChance: 0, moveRange: 0, maxPoise: 0, maxAp: 0 };
       this.activePacts = [];
       this.isVulnerableNextCombat = false;
@@ -196,7 +200,7 @@ window.GameInventory = (function() {
     }
 
     equipItem(item) {
-      if (!item) return;
+      if (!this.canEquip(item)) return false;
       const slot = item.slot;
       if (!slot) return;
 
@@ -213,6 +217,11 @@ window.GameInventory = (function() {
 
       this.equipped[slot] = item;
       this.recalculateSets();
+      return true;
+    }
+
+    canEquip(item) {
+      return !!item && ['weapon', 'offhand', 'armor', 'relic'].includes(item.slot) && (!item.classReq || item.classReq === this.heroClassId);
     }
 
     unequipItem(slot) {
@@ -278,7 +287,7 @@ window.GameInventory = (function() {
 
         if (itemForge > 0) {
           if (item.slot === 'weapon') {
-            itemAtk += itemForge * 4;
+            itemAtk += itemForge * 2;
             itemPoise += itemForge * 4;
           } else if (item.slot === 'armor') {
             itemDef += itemForge * 3;
@@ -423,6 +432,7 @@ window.GameInventory = (function() {
         if (this.pactBonuses.maxAp) stats.maxAp = Math.max(2, (stats.maxAp || 3) + this.pactBonuses.maxAp);
       }
 
+      stats.critChance = Math.min(.75, Math.max(0, stats.critChance));
       stats.hp = Number.isFinite(this.currentHp) ? Math.max(0,Math.min(stats.maxHp,this.currentHp)) : stats.maxHp;
       return stats;
     }
@@ -476,12 +486,14 @@ window.GameInventory = (function() {
 
     addLoot(item) {
       if (item) {
-        this.items.push(item);
+        this.items.push(JSON.parse(JSON.stringify(item)));
+        this.saveToStorage();
       }
     }
 
     generateRandomLoot(floorNumber) {
       const pool = RPG_DATA.ITEMS.filter(i => {
+        if (i.dropOnly) return false;
         if (floorNumber <= 2) return i.rarity === 'common' || i.rarity === 'rare';
         return true;
       });
@@ -491,6 +503,7 @@ window.GameInventory = (function() {
 
     getFloorShop(floorNumber, forceRefresh = false) {
       const f = floorNumber || 1;
+      if (this.floorShops[f]) this.floorShops[f] = this.floorShops[f].filter(item => !RPG_DATA.ITEMS.find(def => def.id === item.id)?.dropOnly);
       if (!this.floorShops[f] || forceRefresh) {
         if (typeof RPG_DATA !== 'undefined' && RPG_DATA.generateFloorShop) {
           this.floorShops[f] = RPG_DATA.generateFloorShop(f, this.heroClassId);
@@ -539,13 +552,13 @@ window.GameInventory = (function() {
       return this.bountiesCompleted.includes(floorOrId);
     }
 
-    completeBounty(bountyId, bountyDef) {
+    completeBounty(bountyId, bountyDef, awardRelic = true) {
       if (!this.bountiesCompleted) this.bountiesCompleted = [];
       if (!this.bountiesCompleted.includes(bountyId)) {
         this.bountiesCompleted.push(bountyId);
       }
       let relicAwarded = null;
-      if (bountyDef && bountyDef.relicReward) {
+      if (awardRelic && bountyDef && bountyDef.relicReward) {
         const relic = RPG_DATA.ITEMS.find(i => i.id === bountyDef.relicReward);
         if (relic) {
           relicAwarded = { ...relic };
@@ -585,17 +598,21 @@ window.GameInventory = (function() {
           forgeLevel: this.forgeLevel || 0,
           abyssContract: this.abyssContract || 0,
           savedDepth: this.savedDepth || 0,
+          chapterObjectives: this.chapterObjectives || {},
           equipped: this.equipped,
           items: this.items,
           floorShops: this.floorShops || {},
+          blackMarkets: this.blackMarkets || {},
           pactBonuses: this.pactBonuses || {},
           activePacts: this.activePacts || [],
           isVulnerableNextCombat: !!this.isVulnerableNextCombat,
           bountiesCompleted: this.bountiesCompleted || []
         };
         localStorage.setItem('ever_deeper_v2_save', JSON.stringify(data));
+        return true;
       } catch (e) {
         console.warn('Could not save game state:', e);
+        return false;
       }
     }
 
@@ -628,9 +645,20 @@ window.GameInventory = (function() {
         this.forgeLevel = Math.min(5, data.forgeLevel || 0);
         this.abyssContract = data.abyssContract === 1 ? 1 : 0;
         this.savedDepth = Math.max(0, Math.min(RPG_DATA.FLOORS.length-1, Math.floor(data.savedDepth || 0)));
+        this.chapterObjectives = {};
+        for (const f of [6,7,8]) this.chapterObjectives[f] = [...new Set((data.chapterObjectives?.[f] || []).filter(n => Number.isInteger(n) && n >= 0 && n < 3))];
         this.equipped = data.equipped || this.equipped;
         this.items = data.items || [];
+        // Preserve incompatible legacy equipment in the bag instead of deleting it.
+        for (const slot of Object.keys(this.equipped)) {
+          const item = this.equipped[slot];
+          if (item && !this.canEquip(item)) {
+            this.items.push(item);
+            this.equipped[slot] = null;
+          }
+        }
         this.floorShops = data.floorShops || {};
+        this.blackMarkets = data.blackMarkets || {};
         this.pactBonuses = data.pactBonuses || { maxHp: 0, atk: 0, critChance: 0, moveRange: 0, maxPoise: 0, maxAp: 0 };
         this.activePacts = data.activePacts || [];
         this.isVulnerableNextCombat = !!data.isVulnerableNextCombat;

@@ -40,8 +40,8 @@ window.GameDungeon = (function() {
 
     generateRooms() {
       const targetRoomCount = Math.max(5, (this.floorData.roomsCount || 4));
-      const minSize = 5;
-      const maxSize = 7;
+      const minSize = this.floorData.minRoomSize || 5;
+      const maxSize = this.floorData.maxRoomSize || 7;
       const maxAttempts = 180;
 
       for (let attempt = 0; attempt < maxAttempts && this.rooms.length < targetRoomCount; attempt++) {
@@ -185,12 +185,26 @@ window.GameDungeon = (function() {
       }
       this.bountyRoom = bestBountyRoom;
 
+      // Optional encounters occupy secluded rooms, never the arrival/boss/bounty rooms.
+      const encounterRooms = this.rooms.filter(room => room !== startRoom && room !== bossRoom && room !== bestBountyRoom);
+      const shuffle = list => { for (let i=list.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; } return list; };
+      shuffle(encounterRooms);
+      const roll = Math.random(), count = roll < .20 ? 0 : roll < .75 ? 1 : 2;
+      const visitors = shuffle(['eloria_alchemist','valen_lorekeeper','malakor_shade','vesper_broker']);
+      const encounters = new Map(encounterRooms.slice(0,count).map((room,i)=>[room,visitors[i]]));
+
       // Intermediate rooms: spawn monsters, elites, chests, altars
       let eliteCount = 0;
       for (let r = 1; r < this.rooms.length; r++) {
         const room = this.rooms[r];
         if (room === bossRoom) continue; // Boss room has only the boss & stairs
 
+        if (encounters.has(room)) {
+          const gx = room.x + 1 + Math.floor(Math.random() * (room.w - 2));
+          const gz = room.z + 1 + Math.floor(Math.random() * (room.h - 2));
+          this.entities.push({type:'npc', npcId:encounters.get(room), gx, gz});
+          continue;
+        }
         const isBountyRoom = (room === bestBountyRoom);
 
         // Spawn roaming monsters (guaranteeing at least 1 elite per floor)
@@ -277,14 +291,7 @@ window.GameDungeon = (function() {
       });
 
       // Sanctuary NPC
-      const npcByFloor = {
-        1: 'kaelen_smith',
-        2: 'eloria_alchemist',
-        3: 'valen_lorekeeper',
-        4: 'malakor_shade',
-        5: 'kaelen_smith'
-      };
-      const assignedNpc = npcByFloor[this.floorData.floor] || 'kaelen_smith';
+      const assignedNpc = 'kaelen_smith';
       this.entities.push({
         type: 'npc',
         npcId: assignedNpc,
@@ -316,7 +323,7 @@ window.GameDungeon = (function() {
       }
 
       // Urns in Start Room
-      if (this.grid[startRoom.z + 1] && this.grid[startRoom.z + 1][startRoom.x + startRoom.w - 2] === 1) {
+      if (this.grid[startRoom.z + 1] && this.grid[startRoom.z + 1][startRoom.x + startRoom.w - 2] === 1 && !this.entities.some(e => e.gx === startRoom.x + startRoom.w - 2 && e.gz === startRoom.z + 1)) {
         this.entities.push({
           type: 'urn',
           gx: startRoom.x + startRoom.w - 2,
@@ -389,8 +396,8 @@ window.GameDungeon = (function() {
       wallGroup.name = 'walls';
 
       // Colors for full vision and dimmed explored memory
-      const floorColor = 0xadb1a4;
-      const wallColor = 0xb4b9ac;
+      const floorColor = this.floorData.floorTone || 0xadb1a4;
+      const wallColor = this.floorData.wallTone || 0xb4b9ac;
       const dimFloorColor = 0x0c0b0e;
       const dimWallColor = 0x120f14;
 

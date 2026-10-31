@@ -129,6 +129,12 @@ window.EverDeeperV2 = (function() {
     // Clean up previous combat highlight group if exists
     if (combat && combat.highlightGroup) {
       combat.clearAiTimeouts();
+      for (const unit of combat.combatants || []) {
+        if (unit.chapterMarkGroup) GamePresentation.disposeTree(unit.chapterMarkGroup);
+        unit.chapterMarkGroup = null;
+        unit.chapterMark = null;
+      }
+      combat.hideTargetForecast();
       combat.clearIntentBadges();
       combat.floatingTexts.forEach(item => item.el.remove());
       combat.floatingTexts = [];
@@ -185,6 +191,8 @@ window.EverDeeperV2 = (function() {
       } else if (ent.type === 'boss') {
         const bDef = RPG_DATA.BOSSES[ent.bossId];
         model = GameModels.createMonster(bDef.modelType, true);
+      } else if (ent.type === 'chapter_objective') {
+        model = FinalChapters.objectiveModel(floorData.floor,FinalChapters.progress(inventory,floorData.floor).includes(ent.objectiveIndex));
       } else if (ent.type === 'urn') {
         model = GameModels.createUrn();
       } else if (ent.type === 'chest') {
@@ -304,7 +312,11 @@ window.EverDeeperV2 = (function() {
       const ent = activeEntities[i];
       if ((ent.type === 'monster' || ent.type === 'boss' || ent.type === 'bounty_target') && !ent.defeated) {
         const dist = Math.abs(heroGrid.gx - ent.gx) + Math.abs(heroGrid.gz - ent.gz);
-        if (dist <= 2) {
+        if (dist <= 2 && EnemyPatrol.sight(dungeon,heroGrid,ent) && (ent.type==='boss' || (!EnemyPatrol.safe(dungeon,heroGrid)&&ent.patrol?.alert>=.8))) {
+          if (ent.type === 'boss' && !FinalChapters.complete(inventory,currentFloorIndex+1)) {
+            if (!ent.sealNotice || performance.now()-ent.sealNotice>5000) { ent.sealNotice=performance.now();showNotification('Boss masih tersegel. '+FinalChapters.status(inventory,currentFloorIndex+1)); }
+            continue;
+          }
           // ENTER COMBAT!
           startCombatEncounter(ent);
           break;
@@ -329,7 +341,7 @@ window.EverDeeperV2 = (function() {
     let nearby = null;
 
     for (let ent of activeEntities) {
-      if (ent.type === 'urn' || ent.type === 'chest' || ent.type === 'cursed_chest' || ent.type === 'cursed_altar' || ent.type === 'bounty_board' || ent.type === 'shrine' || ent.type === 'lore' || ent.type === 'npc' || ent.type === 'stairs') {
+      if (ent.type === 'chapter_objective' || ent.type === 'urn' || ent.type === 'chest' || ent.type === 'cursed_chest' || ent.type === 'cursed_altar' || ent.type === 'bounty_board' || ent.type === 'shrine' || ent.type === 'lore' || ent.type === 'npc' || ent.type === 'stairs') {
         const dist = Math.abs(heroGrid.gx - ent.gx) + Math.abs(heroGrid.gz - ent.gz);
         if (dist <= 1) {
           nearby = ent;
@@ -343,6 +355,7 @@ window.EverDeeperV2 = (function() {
       promptEl.style.display = 'inline-flex';
       let action = 'Berinteraksi';
       let icKey = 'spark';
+      if (nearby.type === 'chapter_objective') action = nearby.label + (FinalChapters.progress(inventory,currentFloorIndex+1).includes(nearby.objectiveIndex) ? ' (Selesai)' : ' — Pulihkan');
       if (nearby.type === 'urn') {
         icKey = 'chalice';
         action = nearby.isDestroyed ? 'Pecahan Guci Kuno' : 'Hancurkan Guci Kuno';
@@ -394,6 +407,11 @@ window.EverDeeperV2 = (function() {
     const promptEl = document.getElementById('interactPrompt');
     if (!promptEl || !promptEl.currentEntity) return;
     const ent = promptEl.currentEntity;
+    if(ent.type==='chapter_objective') {
+      const result=FinalChapters.interact(inventory,dungeon,ent);showNotification(result.message);
+      if(result.success){ent.model.traverse(o=>{if(o.isMesh&&o.material.color)o.material.color.multiplyScalar(.35);});GameAudio.playBoonSelect();updateHUD();}
+      return;
+    }
 
     if (ent.type === 'urn' && !ent.isDestroyed) {
       ent.isDestroyed = true;
@@ -446,7 +464,7 @@ window.EverDeeperV2 = (function() {
         scene.add(beam);
         setTimeout(() => GamePresentation.disposeTree(beam), 3000);
 
-        showNotification(`${GameIcons.svg('chest')} Membuka Peti: Memperoleh ${loot.name} & +${goldAmt} Gold!`);
+        showNotification(`${GameIcons.svg('chest')} Diperoleh: ${loot.name} · +${goldAmt} Gold`, loot);
         inventory.saveToStorage();
       }
     } else if (ent.type === 'cursed_chest') {
@@ -766,6 +784,8 @@ window.EverDeeperV2 = (function() {
   // --- COMBAT INTEGRATION ---
 
   function startCombatEncounter(targetEntity) {
+    if(targetEntity.type==='boss'&&!FinalChapters.complete(inventory,currentFloorIndex+1)){showNotification(FinalChapters.status(inventory,currentFloorIndex+1));return;}
+    EnemyPatrol.stop(activeEntities,dungeon);
     gameState = 'combat';
     const computedStats = inventory.getComputedStats();
     if (inventory.currentHp !== undefined) {
@@ -1221,6 +1241,28 @@ window.EverDeeperV2 = (function() {
   function setupUI() {
     hydrateStaticIcons(document);
     setupPresentationUI();
+    const chapterHud=document.createElement('div');chapterHud.id='chapterObjectiveHud';chapterHud.style.cssText='position:fixed;right:18px;top:80px;max-width:min(360px,70vw);padding:10px 12px;background:#100d12cc;color:#d7c7ba;border-left:2px solid #9c4c44;font-size:12px;line-height:1.6;pointer-events:none;z-index:15';document.body.appendChild(chapterHud);
+    const saveBtn=document.createElement('button');saveBtn.className='hud-btn';saveBtn.id='saveGameBtn';saveBtn.textContent='Simpan';
+    const homeBtn=document.createElement('button');homeBtn.className='hud-btn';homeBtn.id='saveHomeBtn';homeBtn.textContent='Simpan & Home';
+    document.getElementById('visualSettingsBtn').parentElement.append(saveBtn,homeBtn);
+    function saveCheckpoint(){
+      if(gameState==='title'||gameState==='ending'||combat?.isActive||victoryPending){showNotification('Simpan manual tersedia saat aman di luar pertarungan.');return false;}
+      inventory.savedDepth=currentFloorIndex;
+      if(!inventory.saveToStorage()){showNotification('Save gagal. Penyimpanan browser tidak tersedia; jangan tutup game dulu.');return false;}
+      showNotification('Tersimpan — Lantai '+(currentFloorIndex+1)+'. Lanjutkan kembali ke perkemahan lantai ini.');return true;
+    }
+    saveBtn.onclick=saveCheckpoint;
+    homeBtn.onclick=()=>{
+      if(!saveCheckpoint())return;
+      for(const key in keys)keys[key]=false;
+      isRightMouseDown=false;gameState='title';
+      document.querySelectorAll('.modal-overlay').forEach(el=>el.style.display='none');
+      document.getElementById('landingPage').style.display='flex';
+      document.getElementById('landingMainMenu').style.display='block';
+      document.getElementById('landingCharSelect').style.display='none';
+      const button=document.getElementById('continueGameBtn');button.style.display='inline-flex';button.textContent='Lanjutkan — Lantai '+(inventory.savedDepth+1);
+      updateHUD();
+    };
 
     // Landing Page / Title Screen Buttons
     const landing = document.getElementById('landingPage');
@@ -1230,6 +1272,7 @@ window.EverDeeperV2 = (function() {
     const contBtn = document.getElementById('continueGameBtn');
     if (hasSave && contBtn) {
       contBtn.style.display = 'inline-flex';
+      contBtn.textContent='Lanjutkan — Lantai '+((inventory.savedDepth||0)+1);
     }
 
     // 1. "Mulai Ekspedisi Baru" -> Show Character Selection on Landing Page
@@ -1269,7 +1312,7 @@ window.EverDeeperV2 = (function() {
     // 4. "Lanjutkan Ekspedisi" (Continue Saved Game)
     if (contBtn) {
       contBtn.addEventListener('click', () => {
-        inventory.loadFromStorage();
+        if(!inventory.loadFromStorage()){showNotification('Save tidak ditemukan atau tidak dapat dibaca.');return;}
         if (landing) landing.style.display = 'none';
         gameState = 'explore';
         if (heroModel) GamePresentation.disposeTree(heroModel);
@@ -1587,9 +1630,10 @@ window.EverDeeperV2 = (function() {
         <div class="tooltip-stat-item">Tipe Target: <b>${skill.area ? 'Area (3x3 AoE)' : (skill.range === 0 ? 'Diri Sendiri' : 'Satu Target')}</b></div>
       </div>
       <div class="tooltip-desc">${skill.desc || ''}</div>
+      ${skill.dmgMult ? '<div class="tooltip-desc">Ketahanan membatasi total burst satu aktivasi, termasuk efek susulan. Gear puncak +10 dapat menembus batas musuh biasa; elite dan boss tetap tahan burst.</div>' : ''}
       <div class="tooltip-condition-box">
         <b>${GameIcons.svg('spark', 'fantasy-icon icon-xs')} Aturan Serangan Bersyarat:</b><br>
-        ${skill.conditionText || 'Flank (+25% DMG dari samping) dan Backstab (100% Critical Hit +50% DMG dari belakang musuh) berlaku!'}
+        ${skill.conditionText || 'Posisi samping: bonus 10%; belakang: bonus 30% dan peluang critical +15%. Bonus gabungan memiliki diminishing returns.'}
       </div>
       ${adrenStatus}
     `;
@@ -1619,7 +1663,7 @@ window.EverDeeperV2 = (function() {
     // Stats breakdown
     let forgeBonusHtml = '';
     if (forgeLvl > 0) {
-      if (item.slot === 'weapon') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 4} ATK, +${forgeLvl * 4} Poise`;
+      if (item.slot === 'weapon') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 2} ATK, +${forgeLvl * 4} Poise`;
       else if (item.slot === 'armor') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 3} DEF, +${forgeLvl * 12} Max HP, +${forgeLvl * 3} Poise`;
       else if (item.slot === 'offhand') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 2} DEF, ${(item.atk ? `+${forgeLvl * 2} ATK, ` : '')}+${forgeLvl * 3} Poise`;
       else if (item.slot === 'relic') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): ${(item.atk ? `+${forgeLvl * 2} ATK, ` : '')}${(item.def ? `+${forgeLvl * 2} DEF, ` : '')}${(item.hp ? `+${forgeLvl * 10} HP` : '+5 Poise')}`;
@@ -1862,6 +1906,9 @@ window.EverDeeperV2 = (function() {
     }
 
     inventory.items.forEach((item, idx) => {
+      const classNames = {warrior:'Vanguard', mage:'Arcanist', rogue:'Skirmisher', archer:'Ranger'};
+      const classLabel = item.classReq ? classNames[item.classReq] || item.classReq : 'Semua class';
+      const usable = inventory.canEquip(item);
       const sellVal = Math.max(10, Math.round((item.price || 40) * 0.45));
       const forgeBadge = item.forgeLevel > 0 ? `<span class="forge-badge">+${item.forgeLevel}</span>` : '';
       let statChips = '';
@@ -1888,13 +1935,24 @@ window.EverDeeperV2 = (function() {
           <div class="bento-chips-row">${statChips}</div>
         </div>
         <div class="item-actions-row" style="margin-top:6px;">
-          <button class="equip-btn" style="flex:1;">Pasang</button>
+          <button class="equip-btn" style="flex:1;" ${usable ? '' : 'disabled'}>${usable ? 'Pasang' : 'Class terkunci'}</button>
           <button class="sell-btn" title="Jual barang">${GameIcons.svg('coin', 'fantasy-icon icon-xs')} +${sellVal}</button>
         </div>
       `;
 
-      card.onmouseenter = (e) => showItemTooltip(e, item, 'bag');
-      card.onmousemove = (e) => positionBentoTooltip(e);
+      const requirement = document.createElement('div');
+      requirement.textContent = 'Class: ' + classLabel;
+      requirement.style.cssText = 'font-size:11px;color:#c9bdb5;margin-top:8px';
+      card.appendChild(requirement);
+      if (RPG_DATA.CRAFT_RECIPES.some(recipe => recipe.ingredients.includes(item.id))) {
+        const hint = document.createElement('p');
+        hint.style.cssText = 'font-size:11px;color:#c9bdb5';
+        hint.textContent = 'Bahan resep relik — bawa ke Kaelen di perkemahan awal.';
+        card.appendChild(hint);
+      }
+
+      card.onmouseenter = (e) => { if (!e.target.closest('details')) showItemTooltip(e, item, 'bag'); };
+      card.onmousemove = (e) => { if (e.target.closest('details')) hideBentoTooltip(); else positionBentoTooltip(e); };
       card.onmouseleave = () => hideBentoTooltip();
 
       card.querySelector('.equip-btn').onclick = (e) => {
@@ -2114,7 +2172,7 @@ window.EverDeeperV2 = (function() {
       card.querySelector('.boon-select-btn').onclick = () => {
         inventory.addBoon(boon.id);
         modal.style.display = 'none';
-        showNotification(`${GameIcons.svg('sun')} Berkat Surya Diterima: ${boon.name}!`);
+        showNotification(`${GameIcons.svg('sun')} Berkat Surya: ${boon.name}`, boon);
         GameAudio.playHeal();
         renderSkillButtons();
       };
@@ -2235,6 +2293,19 @@ window.EverDeeperV2 = (function() {
 
     // Role-specific primary service & Blacksmith Forge Station
     const role = npcData.role || npcData.serviceType || 'blacksmith';
+    document.getElementById('relicCraftStation')?.remove();
+    if (npcData.id === 'kaelen_smith') {
+      const station = document.createElement('section');
+      station.id = 'relicCraftStation';
+      forgeStation.parentElement.insertBefore(station, forgeStation);
+      RelicCrafting.render(station, inventory, {
+        npcId: npcData.id,
+        inCombat: () => !!combat?.isActive,
+        isPresent: () => gameState === 'dialogue' && currentActiveNpcData?.id === 'kaelen_smith',
+        notify: showNotification,
+        refresh: () => { renderNpcServicesAndShop(npcData); updateHUD(); }
+      });
+    }
 
     if (role === 'blacksmith') {
       if (serviceHeader) serviceHeader.innerHTML = `${GameIcons.svg('fire', 'fantasy-icon icon-xs')} Layanan Penempaan Senjata & Zirah Kaelen:`;
@@ -2331,7 +2402,7 @@ window.EverDeeperV2 = (function() {
                   return;
                 }
                 GameAudio.playHeavyImpact();
-                showNotification(`${GameIcons.svg('hammer')} ${res.item.name} berhasil ditempa ke +${res.newLevel}!`);
+                showNotification(`${GameIcons.svg('hammer')} ${res.item.name} berhasil ditempa ke +${res.newLevel}!`, res.item);
                 renderNpcServicesAndShop(npcData);
               };
             }
@@ -2343,7 +2414,10 @@ window.EverDeeperV2 = (function() {
       if (forgeStation) forgeStation.style.display = 'none';
       if (primaryServiceCard) primaryServiceCard.style.display = 'block';
 
-      if (role === 'alchemist') {
+      if (role === 'blackmarket') {
+        if (primaryServiceCard) primaryServiceCard.style.display = 'none';
+        if (serviceHeader) serviceHeader.textContent = 'Pasar Gelap Vesper — buka tab Toko untuk melihat stok Legendary / Mythic. Stok terbatas, harga tinggi, tanpa refresh.';
+      } else if (role === 'alchemist') {
         if (serviceHeader) serviceHeader.innerHTML = `${GameIcons.svg('flask', 'fantasy-icon icon-xs')} Layanan Peracikan Eliksir Bunga Surya:`;
         if (forgeTitle) forgeTitle.innerHTML = `${GameIcons.svg('flask', 'fantasy-icon icon-sm')} Racik Eliksir Darah Surya (+25 Max HP)`;
         if (serviceDesc) serviceDesc.innerHTML = 'Menyaring nektar bunga surya dengan embun beku. Menambah <b>+25 Max HP secara permanen</b> untuk ekspedisi ini!';
@@ -2415,16 +2489,18 @@ window.EverDeeperV2 = (function() {
 
     // Dynamic Per-Floor Bento Shop System (Zero Text Overload)
     const currentFloor = currentFloorIndex + 1;
+    const blackMarket = role === 'blackmarket';
     const floorDef = RPG_DATA.FLOORS[currentFloorIndex];
     const floorName = floorDef ? floorDef.name : `Lantai ${currentFloor}`;
     const floorTitleEl = document.getElementById('npcShopFloorTitle');
     if (floorTitleEl) {
-      floorTitleEl.innerHTML = `Stok Toko Lantai ${currentFloor}: <span style="color:#fde047;">${floorName}</span>`;
+      floorTitleEl.textContent = blackMarket ? `Pasar Gelap · Lantai ${currentFloor} · Stok terbatas, tanpa refresh` : `Stok Toko Lantai ${currentFloor}: ${floorName}`;
     }
 
     // Refresh Shop Button (30 Gold)
     const refreshBtn = document.getElementById('npcShopRefreshBtn');
     if (refreshBtn) {
+      refreshBtn.style.display = blackMarket ? 'none' : '';
       refreshBtn.onclick = () => {
         hideBentoTooltip();
         const res = inventory.refreshFloorShop(currentFloor);
@@ -2443,10 +2519,10 @@ window.EverDeeperV2 = (function() {
     if (!shopGrid) return;
     shopGrid.innerHTML = '';
 
-    const shopPool = inventory.getFloorShop(currentFloor);
+    const shopPool = blackMarket ? inventory.getBlackMarket(currentFloor) : inventory.getFloorShop(currentFloor);
     shopPool.forEach(item => {
-      const price = item.price || 110;
-      const alreadyOwned = inventory.items.some(x => x.id === item.id) || Object.values(inventory.equipped).some(x => x && x.id === item.id);
+      const price = blackMarket ? item.marketPrice : item.price || 110;
+      const alreadyOwned = blackMarket ? item.sold : inventory.items.some(x => x.id === item.id) || Object.values(inventory.equipped).some(x => x && x.id === item.id);
       const forgeBadge = item.forgeLevel > 0 ? `<span class="forge-badge">+${item.forgeLevel}</span>` : '';
       let statChips = '';
       if (item.atk) statChips += `<span class="bento-chip atk">+${item.atk} ATK</span>`;
@@ -2472,11 +2548,11 @@ window.EverDeeperV2 = (function() {
           <div class="bento-chips-row">${statChips}</div>
         </div>
         <button class="equip-btn" ${alreadyOwned ? 'disabled style="opacity:0.5;cursor:default;"' : ''} style="margin-top:6px;">
-          ${alreadyOwned ? '✓ Sudah Dimiliki' : `${GameIcons.svg('coin', 'fantasy-icon icon-xs')} Beli (${price} Gold)`}
+          ${alreadyOwned ? (blackMarket ? 'Stok habis' : 'Sudah dimiliki') : `${GameIcons.svg('coin', 'fantasy-icon icon-xs')} Beli (${price} Gold)`}
         </button>
       `;
 
-      card.onmouseenter = (e) => showItemTooltip(e, item, 'shop');
+      card.onmouseenter = (e) => showItemTooltip(e, blackMarket ? {...item,price:item.marketPrice} : item, 'shop');
       card.onmousemove = (e) => positionBentoTooltip(e);
       card.onmouseleave = () => hideBentoTooltip();
 
@@ -2488,10 +2564,16 @@ window.EverDeeperV2 = (function() {
             showNotification(`${GameIcons.svg('warning')} Gold tidak cukup! Butuh ${price} Gold.`);
             return;
           }
-          inventory.gold -= price;
-          inventory.addLoot({ ...item });
+          if (blackMarket) {
+            if (gameState !== 'dialogue' || currentActiveNpcData?.id !== 'vesper_broker' || combat?.isActive) return;
+            const result = inventory.buyBlackMarket(currentFloor,item.id);
+            if (!result.success) { showNotification(result.reason); return; }
+          } else {
+            inventory.gold -= price;
+            inventory.addLoot({ ...item });
+          }
           GameAudio.playChestOpen();
-          showNotification(`${GameIcons.svg('bag')} Membeli ${item.name}! Cek di dalam Tas (I).`);
+          showNotification(`${GameIcons.svg('bag')} Diperoleh: ${item.name}`, item);
           inventory.saveToStorage();
           renderNpcServicesAndShop(npcData);
         };
@@ -2570,6 +2652,14 @@ window.EverDeeperV2 = (function() {
   }
 
   function showVictoryGameModal() {
+    if(window.EndingCinematic&&!EndingCinematic.active){
+      gameState='ending';for(const key in keys)keys[key]=false;isRightMouseDown=false;
+      GameAudio.stopBattleMusic();
+      EndingCinematic.play({heroClass:inventory.heroClassId,onComplete:showEndingEpilogue});
+    }
+  }
+
+  function showEndingEpilogue() {
     gameState = 'dialogue';
     const modal=document.getElementById('storyDescentModal');
     document.getElementById('storyDescentSpeaker').textContent='Liora — Epilog';
@@ -2582,15 +2672,32 @@ window.EverDeeperV2 = (function() {
     modal.style.display='flex';
   }
 
-  function showNotification(msg) {
+  let notificationTimer;
+  function showNotification(msg, reward = null) {
     const notif = document.getElementById('notificationBox');
     if (!notif) return;
+    clearTimeout(notificationTimer);
+    notif.classList.toggle('reward-notification', !!reward);
     notif.innerHTML = msg;
-    notif.style.opacity = '1';
-    notif.style.transform = 'translateY(0)';
-    setTimeout(() => {
+    if (reward?.name) {
+      const colors = {common:'#c4c4c4',uncommon:'#a7b6c7',rare:'#77adfa',epic:'#c395ff',legendary:'#ffd285',mythic:'#ffb4ac'};
+      const walker = document.createTreeWalker(notif, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const index = node.textContent.indexOf(reward.name);
+        if (index < 0) continue;
+        const name = document.createElement('strong');
+        name.textContent = reward.name;
+        name.style.color = colors[reward.rarity] || '#dfd5bf';
+        node.replaceWith(document.createTextNode(node.textContent.slice(0,index)), name, document.createTextNode(node.textContent.slice(index+reward.name.length)));
+        break;
+      }
+    }
+    notif.style.opacity = reward ? '.85' : '1';
+    notif.style.transform = reward ? 'translate(-50%, -50%)' : 'translateY(0)';
+    notificationTimer = setTimeout(() => {
       notif.style.opacity = '0';
-      notif.style.transform = 'translateY(-10px)';
+      notif.style.transform = reward ? 'translate(-50%, -50%)' : 'translateY(-10px)';
     }, 3200);
   }
 
@@ -2616,6 +2723,8 @@ window.EverDeeperV2 = (function() {
 
     const delta = Math.min(clock.getDelta(), .05);
     if (document.hidden) return;
+    if (gameState === 'ending') return;
+    const chapterHud=document.getElementById('chapterObjectiveHud');if(chapterHud){chapterHud.style.display=gameState==='explore'&&!modalOpen&&currentFloorIndex>=5?'block':'none';const text=FinalChapters.status(inventory,currentFloorIndex+1);if(chapterHud.textContent!==text)chapterHud.textContent=text;}
     // Menus only need a quiet backdrop; keep full cadence during play.
     if ((gameState === 'title' || modalOpen) && (++backdropFrame % 4 !== 0)) return;
     const time = clock.getElapsedTime();
@@ -2623,8 +2732,10 @@ window.EverDeeperV2 = (function() {
     // Exploration logic
     if (gameState === 'explore' && !modalOpen && !victoryPending) {
       updateExploration(delta);
+      if(gameState==='explore')EnemyPatrol.update(delta,dungeon,activeEntities,heroModel,startCombatEncounter,showNotification);
     }
 
+    EnemyPatrol.combat(combat);
     // Camera follow & rotation
     updateCamera();
 
@@ -2662,6 +2773,7 @@ window.EverDeeperV2 = (function() {
     init,
     loadFloor,
     getInventory: () => inventory
+    ,getCombat: () => combat
   };
 })();
 

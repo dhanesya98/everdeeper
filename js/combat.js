@@ -129,7 +129,7 @@ window.GameCombat = (function() {
       if (!badge) return;
       if (this.comboCount > 0) {
         badge.style.display = 'flex';
-        badge.innerHTML = `${GameIcons.svg('fire', 'fantasy-icon icon-sm')} <span>COMBO x${this.comboCount} (+${this.comboCount * 10}% DMG)</span>`;
+        badge.innerHTML = `${GameIcons.svg('fire', 'fantasy-icon icon-sm')} <span>COMBO x${this.comboCount} (+${this.comboCount * 4}% DMG)</span>`;
       } else {
         badge.style.display = 'none';
       }
@@ -338,7 +338,7 @@ window.GameCombat = (function() {
           }
         }
 
-        eStats = AbyssBalance.enemy(eStats, this.dungeon.floorData.floor, this.inventory.abyssContract);
+        eStats = AbyssBalance.enemy(eStats, this.dungeon.floorData.floor, this.inventory.abyssContract, isBoss, ed.isElite ? (ed.eliteMod?.statMult||1.3) : 1);
         const enemyUnit = {
           isPlayer: false,
           isBoss: isBoss,
@@ -358,7 +358,7 @@ window.GameCombat = (function() {
           maxPoise: eStats.maxPoise || eStats.poise,
           ap: isBoss ? 4 : 3,
           maxAp: isBoss ? 4 : 3,
-          facing: { dx: 0, dz: -1 },
+          facing: ed.facing ? {...ed.facing} : { dx: 0, dz: -1 },
           buffs: {},
           cooldowns: {},
           isStunned: false,
@@ -597,6 +597,7 @@ window.GameCombat = (function() {
     }
 
     endBattle(playerWon) {
+      if (!this.isActive) return;
       this.isActive = false;
       this.isAiActing = false;
       this.clearAiTimeouts();
@@ -628,7 +629,7 @@ window.GameCombat = (function() {
             if (bDef) {
               goldGained += (bDef.rewardGold || 220);
               expGained += (bDef.rewardExp || 160);
-              this.inventory.completeBounty(bDef.id, bDef);
+              this.inventory.completeBounty(bDef.id, bDef, false);
               if (bDef.relicReward) {
                 const bRelic = RPG_DATA.ITEMS.find(i => i.id === bDef.relicReward);
                 if (bRelic) lootGained.push({ ...bRelic });
@@ -655,7 +656,7 @@ window.GameCombat = (function() {
             // Guaranteed Elite drop: Rare or Epic equipment piece + bonus Gold & EXP
             goldGained += 45;
             expGained += 50;
-            const floorPool = RPG_DATA.ITEMS.filter(i => (i.rarity === 'rare' || i.rarity === 'epic'));
+            const floorPool = RPG_DATA.ITEMS.filter(i => !i.dropOnly && (i.rarity === 'rare' || i.rarity === 'epic'));
             if (floorPool.length > 0) {
               const dropped = floorPool[Math.floor(Math.random() * floorPool.length)];
               lootGained.push({ ...dropped });
@@ -669,7 +670,7 @@ window.GameCombat = (function() {
         if (this.isCursedAmbush) {
           goldGained += 95;
           expGained += 85;
-          const highPool = RPG_DATA.ITEMS.filter(i => (i.rarity === 'epic' || i.rarity === 'legendary'));
+          const highPool = RPG_DATA.ITEMS.filter(i => !i.dropOnly && (i.rarity === 'epic' || i.rarity === 'legendary'));
           if (highPool.length > 0) {
             const highItem = highPool[Math.floor(Math.random() * highPool.length)];
             lootGained.push({ ...highItem });
@@ -689,6 +690,9 @@ window.GameCombat = (function() {
 
         this.inventory.gold += goldGained;
         didLevelUp = this.inventory.gainExp(expGained);
+        // Commit the exact victory list once, before displaying it (including bounty relics).
+        lootGained.forEach(item => this.inventory.addLoot(item));
+        this.inventory.saveToStorage();
         GameAudio.playHeal();
         this.logCombat(`Kemenangan! Memperoleh +${expGained} EXP & +${goldGained} Gold!`, 'trophy');
         if (didLevelUp) {
@@ -958,6 +962,35 @@ window.GameCombat = (function() {
     }
 
     useSkill(attacker, target, skill) {
+      const previous=this.damageAction;
+      this.damageAction={skill,targets:new Map(this.combatants.filter(c=>!c.isPlayer).map(c=>[c,{initialHp:c.hp,spent:0}]))};
+      try { return this.executeSkill(attacker,target,skill); }
+      finally { this.damageAction=previous; }
+    }
+
+    limitHealthDamage(target, amount, execute=false) {
+      amount=Math.max(0,Math.round(amount));
+      const action=this.damageAction;
+      if(target.isPlayer||!action)return amount;
+      let budget=action.targets.get(target);
+      if(!budget){budget={initialHp:target.hp,spent:0};action.targets.set(target,budget);}
+      const fraction=AbyssBalance.burstFraction(action.skill,target,this.inventory);
+      // Reserve the next status tick so an instant hit + its first DoT tick
+      // cannot bypass the same activation's burst budget.
+      const pendingDot=Math.min(5,target.corruptionStacks||0)*8+(target.isPoisoned&&target.poisonTurns>0?(target.poisonDmg||15):0);
+      const ceiling=execute&&!target.isBoss?Infinity:Math.max(1,Math.floor(target.maxHp*fraction)-pendingDot);
+      const allowed=Math.max(0,Math.min(amount,ceiling-budget.spent));
+      budget.spent+=allowed;
+      return allowed;
+    }
+
+    dealHealthDamage(target, amount) {
+      const dealt=Math.min(target.hp,this.limitHealthDamage(target,amount));
+      target.hp=Math.max(0,target.hp-dealt);
+      return dealt;
+    }
+
+    executeSkill(attacker, target, skill) {
       skill = {...skill};
       attacker.cooldowns = attacker.cooldowns || {};
 
@@ -1083,26 +1116,29 @@ window.GameCombat = (function() {
         }, 160);
       }
 
+      const aimX=target.gx-attacker.gx,aimZ=target.gz-attacker.gz;
+      if(aimX||aimZ)attacker.facing=Math.abs(aimX)>Math.abs(aimZ)?{dx:Math.sign(aimX),dz:0}:{dx:0,dz:Math.sign(aimZ)};
       // Check Flanking / Backstab
-      const isBackstab = (attacker.facing.dx === target.facing.dx && attacker.facing.dz === target.facing.dz);
-      const isFlank = !isBackstab && (attacker.facing.dx !== 0 && target.facing.dz !== 0 || attacker.facing.dz !== 0 && target.facing.dx !== 0);
+      const position = AbyssBalance.position(attacker,target);
+      const isBackstab = position === 'back';
+      const isFlank = position === 'flank';
 
       let mult = skill.dmgMult || 1.0;
-      let critChance = attacker.stats.critChance || 0.1;
+      let critChance = attacker.stats.critChance ?? 0.1;
 
       // Hero Combo / Momentum Multiplier
       if (attacker.isPlayer) {
         this.comboCount = Math.min(5, (this.comboCount || 0) + 1);
-        const comboBonus = 1 + (this.comboCount * 0.10);
+        const comboBonus = 1 + (this.comboCount * 0.04);
         mult *= comboBonus;
         this.updateComboUI();
       }
 
       if (isBackstab) {
-        mult *= passives.includes('anatomical_insight') ? 1.8 : 1.5;
-        critChance = 1.0; // Guaranteed crit on backstab!
+        mult *= passives.includes('anatomical_insight') ? 1.4 : 1.3;
+        critChance = Math.min(.85,critChance + .15); // Position bonus, no automatic critical.
       } else if (isFlank) {
-        mult *= 1.25;
+        mult *= 1.10;
       }
 
       // --- SUBCLASS MECHANICS ---
@@ -1181,7 +1217,7 @@ window.GameCombat = (function() {
               if (!c.isPlayer && c.hp > 0) {
                 const dist = Math.abs(c.gx - target.gx) + Math.abs(c.gz - target.gz);
                 if (dist <= 2) {
-                  c.hp = Math.max(0, c.hp - 30);
+                  this.dealHealthDamage(c,30);
                   this.showFloatingText(c, '-30 Overload', 0xeab308);
                 }
               }
@@ -1228,7 +1264,7 @@ window.GameCombat = (function() {
         if (target.weaknessMarks >= 3) {
           target.weaknessMarks -= 3;
           critChance = 1.0;
-          mult *= 1.75;
+          // Guaranteed critical is applied once below.
           attacker.isVanished = true;
           attacker.buffs.dodge = Math.min(0.6, (attacker.buffs.dodge || 0) + 0.60);
           this.showFloatingText(attacker, '100% CRIT & VANISH AKTIF!', 0xc084fc);
@@ -1269,9 +1305,7 @@ window.GameCombat = (function() {
       // 8. Archer: Deadeye (Sniper Bonus, Eagle Eye, Killzone Focus)
       const targetDist = Math.abs(attacker.gx - target.gx) + Math.abs(attacker.gz - target.gz);
       if (attacker.isPlayer && (skill.sniperBonus || passives.includes('killzone_focus') || passives.includes('eagle_eye'))) {
-        if (passives.includes('eagle_eye')) {
-          critChance += 0.20;
-        }
+        // Eagle Eye is already included in computed stats.
         if (targetDist >= 3) {
           mult *= 1.25;
           this.showFloatingText(attacker, 'SNIPER BONUS (+25%)', 0xf59e0b);
@@ -1304,10 +1338,11 @@ window.GameCombat = (function() {
       }
 
       const isCrit = Math.random() < critChance;
-      if (isCrit) mult *= 1.75;
+      if (isCrit) mult *= 1.5;
+      if (attacker.isPlayer) mult=AbyssBalance.outgoing(mult,skill.dmgMult||1);
 
-      const baseAtk = attacker.stats.atk || 20;
-      let targetDef = (target.stats.def || 5) + (target.buffs.guard || 0);
+      const baseAtk = attacker.stats.atk ?? 20;
+      let targetDef = (target.stats.def ?? 5) + (target.buffs.guard || 0);
 
       // Hexbound Soul Siphon DEF shred
       if (passives.includes('soul_siphon') && target.corruptionStacks > 0) {
@@ -1335,8 +1370,9 @@ window.GameCombat = (function() {
       }
 
       // Judicator & Shadow Execution (< 25% or < 30% HP)
-      const isCommanderExec = attacker.isPlayer && passives.includes('tactical_command') && (skill.isExecute || (target.hp <= target.maxHp * 0.25));
-      const isShadowExec = attacker.isPlayer && passives.includes('anatomical_insight') && (skill.isExecute || (target.hp <= target.maxHp * 0.30));
+      const initialTargetHp=this.damageAction?.targets.get(target)?.initialHp ?? target.hp;
+      const isCommanderExec = attacker.isPlayer && passives.includes('tactical_command') && (initialTargetHp <= target.maxHp * 0.25);
+      const isShadowExec = attacker.isPlayer && passives.includes('anatomical_insight') && (initialTargetHp <= target.maxHp * 0.30);
       if (isCommanderExec || isShadowExec) {
         rawDmg = target.isBoss ? Math.max(rawDmg, Math.round(target.maxHp * .12)) : target.hp;
         this.showFloatingText(target, 'EKSEKUSI MATI!', 0xff0000, 'floating-crit');
@@ -1360,6 +1396,7 @@ window.GameCombat = (function() {
       const absorbed = Math.min(barrier, rawDmg);
       target.buffs.barrier = barrier - absorbed;
       rawDmg -= absorbed;
+      rawDmg=this.limitHealthDamage(target,rawDmg,isCommanderExec||isShadowExec);
       const actualDamage = Math.min(target.hp, rawDmg);
       target.hp = Math.max(0, target.hp - rawDmg);
       target.poise = Math.max(0, target.poise - poiseDmg);
@@ -1445,7 +1482,7 @@ window.GameCombat = (function() {
           if (!c.isPlayer && c !== target && c.hp > 0) {
             const dist = Math.abs(c.gx - target.gx) + Math.abs(c.gz - target.gz);
             if (dist <= 2) {
-              c.hp = Math.max(0, c.hp - 20);
+              this.dealHealthDamage(c,20);
               this.showFloatingText(c, '-20 Gema Kritis', 0xfde047);
               this.logCombat(`Gema Kritis merambat ke ${c.name} sebesar 20 DMG!`, 'lightning');
             }
@@ -1455,8 +1492,7 @@ window.GameCombat = (function() {
 
       // Retaliation Thorns (Enemy hit player in Guard - 40% reflect for Bastion)
       if (!attacker.isPlayer && target.isPlayer && (target.buffs.guard || 0) > 0 && this.inventory.passives.includes('retaliation_thorns')) {
-        const retDmg = Math.max(1, Math.round(rawDmg * 0.40));
-        attacker.hp = Math.max(0, attacker.hp - retDmg);
+        const retDmg = this.dealHealthDamage(attacker,Math.max(1, Math.round(rawDmg * 0.40)));
         this.showFloatingText(attacker, `-${retDmg} Duri Pantul (40%)`, 0xeab308);
         this.logCombat(`Duri perisai Bastion memantulkan ${retDmg} True Damage ke ${attacker.name}!`, 'shield');
       }
@@ -1468,7 +1504,7 @@ window.GameCombat = (function() {
         if (this.inventory.activeSetBonuses && this.inventory.activeSetBonuses.some(b => b.set === 'duelist' && b.tier >= 4)) {
           counterDmg = Math.round(counterDmg * 1.35);
         }
-        attacker.hp = Math.max(0, attacker.hp - counterDmg);
+        counterDmg=this.dealHealthDamage(attacker,counterDmg);
         this.showFloatingText(attacker, `-${counterDmg} RIPOSTE COUNTER!`, 0x38bdf8);
         this.logCombat(`Tangkisan Riposte! ${target.name} membalas serangan ${attacker.name} secara otomatis sebesar ${counterDmg} DMG!`, 'sword');
         GameAudio.playSlash();
@@ -1578,8 +1614,7 @@ window.GameCombat = (function() {
             if (u.hp > 0 && u !== target) {
               const dist = Math.abs(u.gx - target.gx) + Math.abs(u.gz - target.gz);
               if (dist <= 1.5) {
-                const expDmg = 28;
-                u.hp = Math.max(0, u.hp - expDmg);
+                const expDmg = this.dealHealthDamage(u,28);
                 this.showFloatingText(u, `-${expDmg} Ledakan Bara`, 0xf97316);
                 this.logCombat(`${u.name} terkena ledakan mayat (-${expDmg} HP)!`, 'fire');
               }
@@ -1615,8 +1650,7 @@ window.GameCombat = (function() {
 
       // Archer: Trigger Twin Shot follow-up arrow
       if (triggeredTwinShot && target && target.hp > 0) {
-        const twinDmg = Math.max(1, Math.round(rawDmg * 0.60));
-        target.hp = Math.max(0, target.hp - twinDmg);
+        const twinDmg = this.dealHealthDamage(target,Math.max(1, Math.round(rawDmg * 0.60)));
         this.showFloatingText(target, `-${twinDmg} PANAH GANDA!`, 0x38bdf8);
         this.logCombat(`Panah Ganda menyusul kilat ke arah ${target.name} (-${twinDmg} DMG)!`, 'ranged');
         GameAudio.playSlash();
@@ -1636,9 +1670,8 @@ window.GameCombat = (function() {
             const dx = Math.abs(c.gx - target.gx);
             const dz = Math.abs(c.gz - target.gz);
             if (dx <= radius && dz <= radius) {
-              const splashDmg = Math.max(1, Math.round(rawDmg * 0.75));
+              const splashDmg = this.dealHealthDamage(c,Math.max(1, Math.round(rawDmg * 0.75)));
               const splashPoise = Math.max(1, Math.round(poiseDmg * 0.75));
-              c.hp = Math.max(0, c.hp - splashDmg);
               c.poise = Math.max(0, c.poise - splashPoise);
               this.showFloatingText(c, `-${splashDmg} Hujan Panah`, 0xf97316);
               this.flashModel(c.model, 0xf97316, 120);
@@ -1663,9 +1696,8 @@ window.GameCombat = (function() {
             const tz = attacker.gz + (stepZ * step);
             const piercedUnit = this.combatants.find(c => !c.isPlayer && c !== target && c.hp > 0 && c.gx === tx && c.gz === tz);
             if (piercedUnit) {
-              const pierceDmg = Math.max(1, Math.round(rawDmg * 0.85));
+              const pierceDmg = this.dealHealthDamage(piercedUnit,Math.max(1, Math.round(rawDmg * 0.85)));
               const piercePoise = Math.max(1, Math.round(poiseDmg * 0.85));
-              piercedUnit.hp = Math.max(0, piercedUnit.hp - pierceDmg);
               piercedUnit.poise = Math.max(0, piercedUnit.poise - piercePoise);
               this.showFloatingText(piercedUnit, `-${pierceDmg} PENETRASI!`, 0xfde047);
               this.flashModel(piercedUnit.model, 0xfde047, 120);
@@ -2188,37 +2220,41 @@ window.GameCombat = (function() {
       }
 
       // Calculate Flanking / Backstab
-      const isBackstab = (hero.facing.dx === target.facing.dx && hero.facing.dz === target.facing.dz);
-      const isFlank = !isBackstab && (hero.facing.dx !== 0 && target.facing.dz !== 0 || hero.facing.dz !== 0 && target.facing.dx !== 0);
+      const position = AbyssBalance.position(hero,target);
+      const isBackstab = position === 'back';
+      const isFlank = position === 'flank';
 
       let mult = skill.dmgMult || 1.0;
       let posText = '<span style="color:#a68d91;">Serangan Berhadapan</span>';
       if (isBackstab) {
-        mult *= 1.5;
-        posText = `<span style="color:#f59e0b; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('lightning', 'fantasy-icon icon-xs')} BACKSTAB (+50% DMG & 100% CRIT!)</span>`;
+        mult *= this.inventory.passives.includes('anatomical_insight')?1.4:1.3;
+        posText = `<span style="color:#f59e0b; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('lightning', 'fantasy-icon icon-xs')} BELAKANG (+15% peluang CRIT)</span>`;
       } else if (isFlank) {
-        mult *= 1.25;
-        posText = `<span style="color:#38bdf8; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('dagger', 'fantasy-icon icon-xs')} FLANK (+25% DMG)</span>`;
+        mult *= 1.10;
+        posText = `<span style="color:#38bdf8; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('dagger', 'fantasy-icon icon-xs')} SAMPING (+10% bonus posisi)</span>`;
       }
 
       const baseAtk = hero.stats.atk || 20;
-      const targetDef = (target.stats.def || 5) + (target.buffs.guard || 0);
-      const estDmg = AbyssBalance.damage(baseAtk, mult, targetDef);
+      const targetDef = (target.stats.def ?? 5) + (target.buffs.guard || 0);
+      mult *= 1 + Math.min(5,(this.comboCount||0)+1)*.04;
+      const estDmg = Math.min(AbyssBalance.damage(baseAtk, AbyssBalance.outgoing(mult,skill.dmgMult||1), targetDef),Math.floor(target.maxHp*AbyssBalance.burstFraction(skill,target,this.inventory)));
       const poiseDmg = skill.poiseDmg || 15;
       const willBreak = (target.poise - poiseDmg) <= 0;
 
       forecastEl.style.display = 'block';
+      document.body.classList.add('forecast-open');
       forecastEl.innerHTML = `
         <span class="forecast-item" style="display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('target', 'fantasy-icon icon-xs')} <b>${skill.name}</b> → <span style="color:#fca5a5;">${target.name}</span></span> &nbsp;|&nbsp; 
         <span class="forecast-item">${rangeStatus}</span> &nbsp;|&nbsp; 
         <span class="forecast-item">${posText}</span> &nbsp;|&nbsp; 
-        <span class="forecast-item" style="display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('blast', 'fantasy-icon icon-xs')} <b>Perkiraan:</b> ~${estDmg} DMG</span> &nbsp;|&nbsp; 
+        <span class="forecast-item" style="display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('blast', 'fantasy-icon icon-xs')} <b>Dasar non-crit:</b> ~${estDmg} DMG</span> &nbsp;|&nbsp; 
         <span class="forecast-item" style="display:inline-flex; align-items:center; gap:4px;">${GameIcons.svg('shield', 'fantasy-icon icon-xs')} <b>Poise:</b> ${target.poise} → ${Math.max(0, target.poise - poiseDmg)}</span> 
         ${willBreak ? `<span style="color:#f97316; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">(${GameIcons.svg('lightning', 'fantasy-icon icon-xs')} STANCE BREAK!)</span>` : ''}
       `;
     }
 
     hideTargetForecast() {
+      document.body.classList.remove('forecast-open');
       const forecastEl = document.getElementById('combatForecast');
       if (forecastEl) forecastEl.style.display = 'none';
     }

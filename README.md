@@ -4,6 +4,20 @@ RPG dark fantasy bergaya pixel dengan eksplorasi **orang pertama (FPS)** dan per
 
 Ikuti jejak Liora menuju dasar Abyss, temukan rahasia sumpah ayah, dan bantu para tawanan pulang. Versi ini memiliki **empat kelas, delapan bab, build campuran, serta kontrak tantangan opsional**.
 
+
+## Balancing aktif: hasil audit semua build
+
+Aturan di bagian ini menggantikan angka balancing dalam catatan pembaruan lama di bawah.
+
+- Monster biasa sekarang memiliki batas dasar HP per lantai dan peran. Lantai 1 sekitar 150 HP untuk monster umum; pemanah dan support lantai 8 memiliki minimal 684 HP, sementara brute lebih tebal. Boss punya batas dasar terpisah, mulai 650 HP di lantai 1 sampai minimal 4.200 HP di lantai 8. Kontrak tetap menambah kesulitan.
+- Pengali serangan berat dan ultimate pada empat class serta semua subclass diturunkan bersama; tooltip dan skill tree mengikuti angka baru. Perlengkapan dan level save lama tetap dihitung ulang dengan aturan ini.
+- Ketahanan membatasi TOTAL damage satu aktivasi terhadap masing-masing target: serangan biasa maksimal 38% max HP, serangan berat 65%, ultimate 88%, sebelum gear puncak. Critical, efek reaksi, berkat, panah susulan, splash, penetrasi, dan ledakan terkait memakai anggaran yang sama. Tick DoT berikutnya ikut dicadangkan agar serangan + tick pertama tidak langsung menghabiskan musuh sehat.
+- Target yang sudah terluka bisa dihabisi dengan serangan berikutnya; anggaran diperbarui untuk tiap aktivasi. Eksekusi Commander/Shadow tetap berlaku hanya jika target sudah di bawah ambang HP SEBELUM aktivasi dimulai. Damage awal reaksi tidak boleh menurunkan HP dari penuh lalu memicu eksekusi pada aktivasi yang sama.
+- Elite selalu memiliki batas 34% / 52% / 72%; boss dan buronan tier boss 14% / 22% / 30%. Keduanya tetap menahan burst meski gear pemain sudah puncak.
+- Gear puncak berarti KEEMPAT slot (weapon, armor, offhand, relic) terisi item yang cocok class, memiliki rarity tertinggi yang tersedia pada slot tersebut, dan semuanya tempa +10. Weapon/armor/relic umumnya Mythic; offhand mengikuti rarity tertinggi yang memang ada. Satu item +9 atau slot kosong menghilangkan pengecualian. Gear puncak membebaskan batas burst monster biasa, sehingga one-shot kembali mungkin jika damage mencukupi.
+- Ketahanan juga berlaku saat kembali ke lantai rendah sebelum gear puncak. Ini aturan burst eksplisit, bukan kenaikan HP musuh berdasarkan equipment pemain. HP musuh tetap berdasarkan lantai, peran, elite, dan kontrak.
+- Regresi: 586.920 skenario serangan di seluruh tahap gear, empat class, 12 cabang, dan campuran cabang. Dari 512.520 skenario sebelum gear puncak: nol one-shot. Uji tekanan tambahan 7.600 skenario mencakup tujuh affix elite, semua pasif/berkat, ATK ekstrem, target berdekatan dan tick status pertama. Pengecualian gear puncak, perlindungan boss, dan kemampuan menghabisi target terluka juga diperiksa. Tes browser: patroli memulai combat, serangan dasar, tooltip skill baru, tanpa error. Ini pengujian otomatis dan terarah, belum playthrough penuh semua susunan giliran/item.
+
 ## Menjalankan game
 
 Gunakan laptop/PC dengan keyboard, mouse, dan browser yang mendukung WebGL.
@@ -186,3 +200,61 @@ Urutan script penting: data sebelum ekspansi, inventory sebelum loadout, dan `ma
 Pemeriksaan mencakup sintaks JavaScript, 48 node empat kelas, pemasangan/migrasi save, refund SP, render menu, serta warna rarity. Pengujian balancing sebelumnya mencakup pemuatan delapan lantai/boss, 20 skill dasar empat kelas, 96 peta acak, pemulihan HP, dan hantaman bertelegraph.
 
 Ini bukan playthrough lengkap seluruh kombinasi build. Kurva kesulitan, pacing cerita, dan interaksi build lanjutan masih perlu dievaluasi melalui permainan penuh.
+
+## Pembaruan drop, penggabungan, dan class lock
+
+- Drop kemenangan (mimic, elite, boss, buronan, peti terkutuk, dan kontrak) disimpan ke tas sebelum layar hadiah muncul. Pemanggilan akhir combat berulang tidak menggandakan hadiah. Peti biasa langsung menyimpan hasil drop.
+- Senjata/zirah/offhand yang memiliki syarat class hanya dapat dipasang oleh class tersebut. Item universal dan relik tanpa syarat bisa dipakai semua class. Drop class lain tetap masuk tas. Perlengkapan save lama yang tidak cocok dipindahkan ke tas saat dimuat.
+- Crafting dilakukan di Kaelen melalui tab Layanan, bukan dari tas. Kaelen hadir di perkemahan awal setiap lantai, bersama NPC spesialis setempat. Tempa biasa +1 tetap layanan terpisah.
+- Resep: Cincin Tulang Kragor + Jantung Es Beku Morwen → Cincin Sumsum Beku (Legendary), biaya 180 Gold. Taring Berkobar Pyrax + Selendang Bayangan Vael → Segel Bara Gerhana (Mythic), biaya 320 Gold. Cincin Sumsum Beku + Taring Berkobar Pyrax → Jantung Sumsum Fajar (Mythic), biaya 320 Gold.
+- Dua bahan dari tas habis setelah konfirmasi; hasil masuk tas. Bahan yang sedang dipakai harus dilepas terlebih dahulu. Level tempa tertinggi diwariskan hingga +10, tidak dijumlahkan. Efek dan stat diganti sesuai pratinjau hasil, bukan dijumlahkan tanpa batas. Jika ada duplikat, bahan dengan tempa terendah dipilih dahulu. Semua hasil resep ini berupa relik universal. Hasil crafting tidak dijual atau masuk drop acak. Tidak ada perubahan pada hasil tempa dari versi sebelumnya.
+- Relik khusus mimic, boss, dan buronan kini tidak dijual di toko atau masuk pool drop acak biasa; stok toko lama dibersihkan dari item khusus tersebut. Drop elite/peti acak masih dapat berisi perlengkapan umum yang juga dijual di toko.
+- Drop yang sudah hilang pada versi lama tidak dapat dipulihkan otomatis karena riwayat item yang gagal diterima tidak tersimpan.
+- Validasi: uji award tepat sekali dan persistensi untuk tujuh jalur combat, peti, empat class, migrasi perlengkapan, validasi resep crafting, serta regresi skill dan balancing. Belum merupakan playthrough penuh delapan bab.
+
+## Pertemuan NPC acak dan pasar gelap
+
+- Kaelen selalu berada dekat titik kedatangan/teleport di perkemahan awal lantai 1–8. Layanan tempa, crafting relik, toko, serta Flask tetap tersedia.
+- Eloria, Valen, Malakor, dan Vesper kini adalah pertemuan opsional. Setiap pembuatan lantai mempunyai peluang 20% tanpa NPC tambahan, 55% satu NPC, dan 25% dua NPC (dibatasi ruangan yang tersedia). Identitas, ruangan, dan petaknya diacak; tidak ada NPC ganda pada lantai yang sama.
+- NPC opsional berada di ruangan jelajah di luar perkemahan, ruang boss, dan ruang buronan. Ruangan pertemuan tidak diisi monster. Semua titik spawn diuji dapat dijangkau dan tidak menumpuk dengan entitas lain.
+- Vesper menjual 4 barang Legendary/Mythic yang cocok class atau universal. Legendary minimal 1.200 Gold, Mythic minimal 2.200 Gold; harga dapat lebih tinggi mengikuti nilai barang. Satu stok per barang, tanpa refresh. Stok dan status terjual tersimpan per lantai; menjual kembali item tidak mengisi stok pedagang.
+- Relik khusus boss/buronan/mimic serta hasil crafting tidak masuk pasar gelap. Visual Vesper menggunakan varian atlas humanoid berjubah yang sudah ada dengan warna tembaga dan proporsi berbeda; portrait memakai sumber Malakor. Tidak menambah tekstur besar atau model berat.
+- Seperti sistem save sebelumnya, Continue membangkitkan ulang peta lantai: posisi/pertemuan NPC bisa berubah. Stok pasar gelap yang sudah dibuat tetap tersimpan.
+- Validasi: 400 peta (87 tanpa NPC opsional, 221 dengan satu, 92 dengan dua), akses spawn, tidak tumpang tindih, keempat NPC muncul dalam sampel; transaksi, pembatasan stok, save/load, dan reset untuk empat class. Bukan pengujian playthrough penuh.
+
+## Notifikasi perolehan
+
+Notifikasi item dari peti, pembelian, tempa, crafting, serta berkat muncul di tengah horizontal pada 44% tinggi layar (sekitar eye level, di atas crosshair). Latar 22% opasitas, teks 85%, tanpa border dan tidak menangkap klik. Nama item mengikuti warna rarity; berkat tanpa rarity memakai warna krem netral. Notifikasi memudar setelah 3,2 detik; timer lama dibatalkan ketika pesan baru muncul. Notifikasi peringatan dan sistem tetap memakai posisi semula. Posisi, warna Legendary, dan transparansi diverifikasi di browser.
+
+## Ending visual dan save manual
+
+- Setelah boss lantai 8 selesai, gunakan pintu/tangga akhir untuk memulai cutscene pixel-art sekitar 32 detik: nama terakhir, penjaga memudar, perjalanan tawanan, dan fajar bersama Liora. Adegan berupa komposisi canvas 640x360, maksimal 24 fps, menggunakan sprite atlas yang sudah ada (representasi Liora memakai varian sprite alchemist dengan pita merah). Belum berupa animasi karakter/sinematik 3D khusus atau voice acting.
+- Jeda/Lanjutkan tersedia; Lewati atau Escape membuka epilog. Setelah epilog, tombol kembali ke Gerbang Abu memulai penjelajahan lantai 1 dengan equipment tetap. Render dungeon berhenti selama cutscene; frame loop ending dibersihkan setelah selesai. Mendukung pengurangan gerakan.
+- Tombol **Simpan** dan **Simpan & Home** menyimpan checkpoint lantai dan progres karakter. Hanya tersedia saat aman, bukan saat combat/ending. Tombol Lanjutkan menampilkan nomor lantai save; kegagalan penyimpanan memberi pesan dan membatalkan kembali ke Home.
+- Save masih menggunakan localStorage browser dan alamat game yang sama. Continue kembali ke perkemahan lantai tersimpan dengan peta baru, bukan posisi atau kondisi persis tiap musuh/peti. Jangan berpindah browser/origin jika ingin membaca save yang sama. Mulai Ekspedisi Baru mengganti save lama.
+- Validasi browser: lantai 5 → Simpan & Home → reload → Lanjutkan kembali ke lantai 5; pintu akhir lantai 8 memicu ending, jeda bekerja, lewati membuka epilog. Ini pengujian terarah, bukan playthrough delapan lantai.
+
+## Bab 6–8: arsip, tungku, dan sumpah
+
+- Lantai 6: pulihkan tiga arsip dalam urutan Ingatan, Nama, Pulang. Petunjuk tercantum di HUD objektif. Boss menyerang kolom yang ditandai; di bawah 50% HP, ancaman melebar menjadi tiga kolom.
+- Lantai 7: kalahkan penjaga ruangan lalu matikan Pengikat Bara, Asap, dan Abu dalam urutan bebas. Boss menyapu baris; fase retak membentuk silang baris dan kolom.
+- Lantai 8: patahkan tiga sumpah. Masing-masing memakai 1 Flask, atau 20 HP bila Flask kosong; tidak bisa mengorbankan HP sampai mati. Menumpas Orthus menghapus biaya sumpah. Boss menandai area berjarak Manhattan 1 petak, lalu 2 petak pada fase retak; pindah keluar sebelum giliran berikutnya.
+- Ketiga objektif wajib selesai sebelum boss dapat dilawan. Progres objektif tersimpan meski Continue membangkitkan peta baru. Objektif yang selesai tidak perlu dibayar/diaktifkan lagi.
+- Buronan baru: Serrik, Pencoret Wajah (6), Ilyra, Janda Tungku (7), dan Orthus, Pemakan Lonceng (8). Hadiah khusus: Pena Nama yang Kembali (Legendary), Jantung Janda Bara (Legendary), dan Lonceng Tanpa Korban (Mythic). Relik ini tidak dijual di toko. Hadiah boss terpisah dari hadiah buronan.
+- Enam sprite baru memakai satu atlas transparan `assets/abyss-final-bosses.png` (~3 MB), berbagi tekstur tanpa model 3D berat. Petak ancaman memakai instancing agar tetap satu draw call. Layout ukuran/jumlah ruangan dan palet batu berbeda per lantai. Ending memakai visual Gema Sumpah baru.
+- Forecast combat dipindahkan keluar dari wadah bertransformasi dan ditempatkan 12 px di atas panel status/hotbar. Petunjuk duplikat disembunyikan selama forecast tampil; ancaman serangan tetap dicantumkan. Ukuran diperbarui saat layar berubah.
+- Validasi: 180 peta lantai akhir dengan objektif terjangkau dan posisi unik; save/load objektif; biaya HP/Flask; ketiga pola serangan mengenai dan meleset; delapan lantai dimuat tanpa error browser; jarak forecast diperiksa pada layar 1224×600. Regresi skill empat class, loot, crafting, dan NPC lulus. Belum merupakan playthrough penuh untuk mengukur keseimbangan semua build.
+
+## Balancing dan musuh bergerak
+
+- Monster biasa dan buronan berpatroli hingga 4 petak dari posisi awal. Jika pemain terlihat dalam 7 petak, mereka mengejar; batas pengejaran 12 petak dari titik awal. Deteksi terhalang dinding. Boss tetap di arena. Mimic tetap menyamar sampai diaktifkan.
+- Kontak dalam 2 petak setelah peringatan minimal 0,8 detik memulai combat, termasuk ketika pemain diam. Giliran tetap mengikuti inisiatif; tidak ada damage gratis di luar combat. POV tetap FPS. Perkemahan awal dan radius 2 petak NPC aman. Menu, dialog, dan combat menghentikan patroli.
+- Keputusan patroli maksimal 4 kali per detik per musuh, pergerakan visual diinterpolasi. Tidak ada aset gambar atau model berat tambahan.
+- Panah di kaki menunjukkan arah hadap nyata (abu saat patroli, merah saat waspada/combat). Target memberi label DEPAN/SAMPING/BELAKANG. Sprite monster masih billboard satu arah: panah dan label adalah acuan posisi, bukan wajah sprite. Belum ada sprite tubuh tampak belakang/samping baru.
+- Backstab sekarang memakai posisi penyerang terhadap arah hadap target. Bonus belakang 30% (40% dengan Anatomical Insight), peluang critical +15%; tidak otomatis critical. Samping memberi bonus 10%. Penyerang menghadap sasaran setelah menyerang. Eagle Eye dihitung sekali.
+- Combo umum +4% per hit, maksimal +20%. Critical 1,5x. Bonus damage pemain gabungan memakai diminishing returns; pengali dasar skill tetap dipertahankan. Weakness Mark memicu critical terjamin sekali, tanpa pengali critical ganda. Stat peluang critical permanen maksimal 75%; proc khusus tetap dapat menjamin critical.
+- Eksekusi Commander/Shadow membutuhkan target <=25%/30% HP. Skill dengan flag execute tidak lagi otomatis membunuh monster yang HP-nya penuh. Boss tetap tidak terkena instant kill.
+- Tempa senjata memberi +2 ATK per tingkat (sebelumnya +4). Level tempa dan item save lama tetap tersimpan; stat dihitung dengan aturan baru. Bonus Poise tempa tidak berubah.
+- HP monster biasa: multiplier 1 + 0,32d + 0,045d², d=lantai-1. DEF bertambah 2,5 per kedalaman, Poise +10% per kedalaman. Boss/buronan memakai kurva HP boss sebelumnya agar tidak ikut menggandakan HP secara berlebihan. Kontrak tetap penguat tambahan. Contoh monster biasa lantai 8: pemanah 354 HP, pemecah segel 626 HP, penjaga paduan 463 HP.
+- Forecast menampilkan estimasi dasar non-critical, bukan janji damage final; proc, passive, pertahanan khusus, dan critical dapat mengubah hasilnya.
+- Validasi: posisi depan/samping/belakang, eksekusi pada HP penuh, Eagle Eye tanpa penghitungan ganda, patroli mengejar pemain diam, boss tidak bergerak, deteksi terhalang dinding, wilayah aman, serta regresi loot/crafting/skill. Browser mengonfirmasi pergerakan -> combat otomatis, penanda arah, tanpa error. Ini bukan playthrough lengkap semua build; ultimate atau keunggulan equipment masih dapat menghasilkan one-shot pada musuh lemah.

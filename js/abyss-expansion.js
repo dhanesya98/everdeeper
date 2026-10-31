@@ -1,9 +1,36 @@
 /* Depth progression is fixed by chapter and player-selected contract, never gear. */
 window.AbyssBalance = {
  damage(atk, mult, def) { return Math.max(1, Math.round(atk * mult * Math.max(.25, 60 / (60 + Math.max(0, def))))); },
- enemy(stats, depth, contract) {
+ position(attacker,target) {
+  const dx=attacker.gx-target.gx,dz=attacker.gz-target.gz,f=target.facing||{dx:0,dz:-1};
+  const dot=dx*f.dx+dz*f.dz,side=Math.abs(dx*f.dz-dz*f.dx);
+  return dot<0&&-dot>side?'back':side>Math.abs(dot)?'flank':'front';
+ },
+ outgoing(mult,base) { const extra=Math.max(0,mult/Math.max(.1,base)-1);return base*(1+extra/(1+extra/1.5)); },
+ peakGear(inv) {
+  const ranks=['common','uncommon','rare','epic','legendary','mythic'],cls=inv?.heroClassId;
+  if(!cls)return false;
+  this._peakRanks ||= {};
+  const ceilings=this._peakRanks[cls] ||= Object.fromEntries(['weapon','armor','offhand','relic'].map(slot=>[slot,Math.max(...RPG_DATA.ITEMS.filter(i=>i.slot===slot&&(!i.classReq||i.classReq===cls)).map(i=>ranks.indexOf(i.rarity)))]));
+  return ['weapon','armor','offhand','relic'].every(slot=>{const i=inv.equipped?.[slot];return i&&(!i.classReq||i.classReq===cls)&&ranks.indexOf(i.rarity)>=ceilings[slot]&&(i.forgeLevel||0)>=10;});
+ },
+ burstFraction(skill, target, inv) {
+  const ultimate=!!skill.adrenalineReq,heavy=(skill.cost||1)>=2||(skill.dmgMult||1)>=1.8;
+  if(target.isBoss)return ultimate?.30:heavy?.22:.14;
+  if(target.isElite)return ultimate?.72:heavy?.52:.34;
+  if(this.peakGear(inv))return Infinity;
+  return ultimate?.88:heavy?.65:.38;
+ },
+ enemy(stats, depth, contract, boss = false, eliteScale = 1) {
   const out = {...stats}, d = Math.max(0, depth - 1);
-  out.hp = out.maxHp = Math.round((stats.hp || stats.maxHp) * (1 + d * .20) * (contract ? 1.15 : 1));
+  const floor=Math.min(8,Math.max(1,depth));
+  const role=stats.role==='archer'||stats.role==='support'?.90:stats.type==='brute'?1.22:1;
+  const minimum=boss?[0,650,900,1250,1700,2200,2800,3400,4200][floor]:[0,150,210,300,390,480,570,670,760][floor]*role*eliteScale;
+  const natural=(stats.hp || stats.maxHp)*(boss?1+d*.20:1+d*.32+d*d*.045);
+  out.hp = out.maxHp = Math.round(Math.max(minimum,natural)*(contract?1.15:1));
+  out.def = Math.round((stats.def || 0) + d * 2.5);
+  out.poise = Math.round((stats.poise || 25) * (1 + d * .10));
+  out.maxPoise = out.poise;
   out.atk = Math.round(stats.atk * (1 + d * .22) * (contract ? 1.2 : 1));
   return out;
  }
@@ -40,3 +67,14 @@ window.AbyssBalance = {
   {id:'contract_lastlight',name:'Meterai Fajar Terakhir',slot:'relic',rarity:'legendary',atk:8,def:-8,crit:.2,price:0,icon:'sun',desc:'Hadiah kontrak: +8 ATK, +20% kritis; -8 DEF. Pertaruhan pada serangan penentu.'}
  ];
 })();
+
+// Keep every base/subclass skill on the same damage budget; equipment remains meaningful.
+(()=>{const seen=new Set();for(const cls of Object.keys(RPG_DATA.CLASSES)){
+ const skills=[...RPG_DATA.CLASSES[cls].skills,...Object.values(RPG_DATA.SKILL_TREES[cls]||{}).flatMap(b=>b.nodes.map(n=>n.skillData).filter(Boolean))];
+ for(const sk of skills){if(seen.has(sk)||!sk.dmgMult)continue;seen.add(sk);const old=sk.dmgMult;
+  const value=sk.adrenalineReq?Math.min(2.65,2+(old-3)*.3):old>1.5?Math.min(2,1+(old-1)*.55):old;
+  sk.dmgMult=Math.round(value*100)/100;
+  for(const key of ['desc','conditionText','tag'])if(typeof sk[key]==='string')sk[key]=sk[key].split(old+'x').join(sk.dmgMult+'x');
+  for(const branch of Object.values(RPG_DATA.SKILL_TREES[cls]||{}))for(const node of branch.nodes)if(node.skillData===sk&&node.desc)node.desc=node.desc.split(old+'x').join(sk.dmgMult+'x');
+ }
+}})();

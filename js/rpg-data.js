@@ -39,7 +39,7 @@ window.RPG_DATA = (function() {
           type: 'single',
           dmgMult: 1.0,
           poiseDmg: 12,
-          conditionText: 'Flank: +25% DMG dari samping | Backstab: 100% Critical Hit (+50% DMG) dari belakang musuh.',
+          conditionText: 'Samping: bonus 10% | Belakang: bonus 30% dan peluang critical +15%. Bonus gabungan mengalami diminishing returns.',
           desc: 'Tebasan pedang baja cepat ke musuh di petak berdekatan.',
           icon: 'sword'
         },
@@ -256,7 +256,7 @@ window.RPG_DATA = (function() {
           dmgMult: 1.0,
           poiseDmg: 10,
           critBonus: 0.20,
-          conditionText: 'Kondisi Presisi: Memiliki tambahan +20% Critical Chance bawaan. Backstab otomatis memicu 100% Critical Hit!',
+          conditionText: 'Kondisi Presisi: Memiliki tambahan +20% Critical Chance bawaan. Posisi belakang menambah peluang critical 15%.',
           desc: 'Serangan cepat belati baja ke titik lemah lawan.',
           icon: 'dagger'
         },
@@ -847,7 +847,7 @@ window.RPG_DATA = (function() {
     };
     const allowed = rarityPools[f] || ['common', 'rare'];
 
-    const pool = ITEMS.filter(i => allowed.includes(i.rarity));
+    const pool = ITEMS.filter(i => !i.dropOnly && allowed.includes(i.rarity));
     const classWeapons = pool.filter(i => i.slot === 'weapon' && (!i.classReq || i.classReq === heroClassId));
     const classOffhands = pool.filter(i => i.slot === 'offhand' && (!i.classReq || i.classReq === heroClassId));
     const armors = pool.filter(i => i.slot === 'armor' && (!i.classReq || i.classReq === heroClassId));
@@ -1691,7 +1691,7 @@ window.RPG_DATA = (function() {
         color: '#c084fc',
         mechanic: {
           name: 'Incar Titik Lemah & Kamuflase (Weakness Mark & 100% Crit Vanish)',
-          desc: 'Menyerang dari Flank memberi +1 Mark, Backstab memberi +2 Mark (maks 5 mark). Pada 3+ Mark, serangan berikutnya dijamin 100% Critical Hit (+75% Crit DMG) dan memicu status Vanish (musuh tidak bisa menargetkanmu selama 1 giliran)!'
+          desc: 'Menyerang dari Flank memberi +1 Mark, Backstab memberi +2 Mark (maks 5 mark). Pada 3+ Mark, serangan berikutnya dijamin 100% Critical Hit (critical 1,5x sebelum diminishing returns) dan memicu status Vanish (musuh tidak bisa menargetkanmu selama 1 giliran)!'
         },
         nodes: [
           {
@@ -2295,7 +2295,7 @@ window.RPG_DATA = (function() {
         id: 'shadow',
         name: 'Pembunuh Bayangan (Shadow Stalker)',
         icon: 'dagger',
-        desc: 'Flank & Backstab menanam Weakness Mark. Pada 3+ Mark, serangan dijamin 100% Critical (+75% Crit DMG) & memicu Vanish. Eksekusi mati musuh < 30% HP.',
+        desc: 'Flank & Backstab menanam Weakness Mark. Pada 3+ Mark, serangan dijamin 100% Critical (critical 1,5x sebelum diminishing returns) & memicu Vanish. Eksekusi mati musuh < 30% HP.',
         passives: [
           { id: 'anatomical_insight', name: 'Titik Vital (Anatomical Insight)', desc: '+12% Crit Chance permanen. Flank & Backstab menanam Weakness Mark (Backstab 1.8x DMG).' },
           { id: 'vanish_kill', name: 'Lenyap Dalam Darah (Vanish on Kill)', desc: 'Membunuh musuh memulihkan 20% Max HP, memberi Camouflage (+50% Dodge), dan mereset CD.' }
@@ -2612,6 +2612,9 @@ window.RPG_DATA = (function() {
       relicReward: 'xylar_void_eye'
     }
   };
+
+  const exclusiveRewards = new Set(['mimic_lucky_tongue', ...Object.values(BOSSES).map(b => b.rewardItem), ...Object.values(BOUNTIES).map(b => b.relicReward)]);
+  ITEMS.forEach(item => { if (exclusiveRewards.has(item.id)) item.dropOnly = true; });
 
   return {
     CLASSES,

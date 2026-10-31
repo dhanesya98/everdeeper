@@ -18,3 +18,9 @@ body[data-view="combat-first-person"] .combat-turn-center{display:none!important
 #skillTooltip{bottom:var(--tooltip-bottom,180px)!important;top:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:min(460px,calc(100vw - 32px))!important;max-height:var(--tooltip-room,60vh)!important;box-sizing:border-box!important;overflow-y:auto!important;pointer-events:auto!important;background:#100e0e!important;z-index:110!important;line-height:1.5!important}
 body.skill-tooltip-open #combatHelp,body.skill-tooltip-open #combatTarget>span,body.skill-tooltip-open #comboBadge,body.skill-tooltip-open #subclassStackBadge{visibility:hidden!important}
 
+
+/* Forecast owns one measured row above BOTH the hotbar and the HP card. */
+#combatForecast{position:fixed!important;top:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;box-sizing:border-box!important;z-index:65!important;white-space:normal!important;overflow:auto!important;padding:10px 14px!important;font:12px/1.6 'Segoe UI',sans-serif!important;background:#100d0df2!important;pointer-events:none!important}
+#combatForecast .forecast-item{flex-wrap:wrap;white-space:normal!important}
+body.forecast-open #combatHelp,body.forecast-open #combatTarget>span,body.forecast-open #comboBadge,body.forecast-open #subclassStackBadge{visibility:hidden!important}
+body.skill-tooltip-open #combatForecast{visibility:hidden!important}

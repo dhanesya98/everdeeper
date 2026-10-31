@@ -799,7 +799,8 @@ window.EverDeeperV2 = (function() {
     // Hook up Bento Tooltip for the relic chip
     const relicChip = container.querySelector('#bountyRelicChip');
     if (relicChip && relic) {
-      relicChip.onmouseenter = (e) => showBentoTooltip(relic, e);
+      relicChip.onmouseenter = (e) => showItemTooltip(e, relic, 'bounty');
+      relicChip.onmousemove = (e) => positionBentoTooltip(e);
       relicChip.onmouseleave = () => hideBentoTooltip();
     }
 
@@ -1595,10 +1596,10 @@ window.EverDeeperV2 = (function() {
         const isDone = inventory.isBountyCompleted(bDef.id);
         if (isDone) {
           bountyPill.className = 'bounty-tracker-pill completed';
-          bountyText.textContent = `BURONAN: ${bDef.name} (TERTUMPAS ✓)`;
+          bountyText.textContent = 'Buronan Selesai ✓ — Lihat Poster';
         } else {
           bountyPill.className = 'bounty-tracker-pill';
-          bountyText.textContent = `BURONAN: ${bDef.name} (BELUM DITUNTASKAN)`;
+          bountyText.textContent = 'Lihat Poster & Hadiah Buronan';
         }
       } else {
         bountyPill.style.display = 'none';
@@ -1615,8 +1616,9 @@ window.EverDeeperV2 = (function() {
     if (!questListEl || !todoListEl || !bountyListEl) return;
 
     const floorNum = currentFloorIndex + 1;
-    const floorDef = (RPG_DATA.FLOORS && RPG_DATA.FLOORS[currentFloorIndex]) || { name: `Lantai ${floorNum}`, bossKey: '' };
-    const bossDef = floorDef.bossKey && RPG_DATA.BOSSES ? RPG_DATA.BOSSES[floorDef.bossKey] : null;
+    const floorDef = (RPG_DATA.FLOORS && RPG_DATA.FLOORS[currentFloorIndex]) || { name: `Lantai ${floorNum}`, bossId: '' };
+    const bossKey = floorDef.bossId || floorDef.bossKey;
+    const bossDef = bossKey && RPG_DATA.BOSSES ? RPG_DATA.BOSSES[bossKey] : null;
     const bossEnt = activeEntities ? activeEntities.find(e => e.type === 'boss') : null;
     const stairsEnt = activeEntities ? activeEntities.find(e => e.type === 'stairs') : null;
     const bossDefeated = bossEnt ? !!bossEnt.defeated : (stairsEnt ? !stairsEnt.locked : false);
@@ -1632,12 +1634,12 @@ window.EverDeeperV2 = (function() {
     }
     if (floorNum >= 6 && window.FinalChapters && typeof FinalChapters.status === 'function') {
       const doneArr = FinalChapters.progress ? FinalChapters.progress(inventory, floorNum) : [];
-      const chapDone = doneArr.length >= 2;
+      const chapDone = doneArr.length >= 3;
       const chapText = FinalChapters.status(inventory, floorNum) || `Segel Kapitel Lantai ${floorNum}`;
       questItems.push({
         done: chapDone,
         label: chapText,
-        tag: `${doneArr.length}/2`
+        tag: `${doneArr.length}/3`
       });
     }
     questItems.push({
@@ -1718,15 +1720,18 @@ window.EverDeeperV2 = (function() {
     const bDef = RPG_DATA.BOUNTIES && RPG_DATA.BOUNTIES[floorNum];
     if (bDef) {
       const isDone = inventory.isBountyCompleted(bDef.id);
+      const rewardGold = bDef.rewardGold || bDef.goldReward || 220;
       bountyListEl.innerHTML = `
-        <div class="hud-obj-item ${isDone ? 'is-done' : 'is-bounty'}">
+        <div class="hud-obj-item ${isDone ? 'is-done' : 'is-bounty'}" style="cursor:pointer;" title="Klik untuk melihat poster buronan">
           <span class="hud-obj-check">${isDone ? '✓' : '⚔'}</span>
           <span class="hud-obj-text">${bDef.name} <small style="color:#a8998e;">(${bDef.title})</small></span>
-          <span class="hud-obj-badge">${isDone ? 'SELESAI' : `+${bDef.goldReward}G`}</span>
+          <span class="hud-obj-badge">${isDone ? 'SELESAI' : `+${rewardGold}G`}</span>
         </div>
       `;
+      bountyListEl.onclick = () => showBountyBoardModal();
     } else {
       bountyListEl.innerHTML = '';
+      bountyListEl.onclick = null;
     }
   }
 
@@ -1855,6 +1860,8 @@ window.EverDeeperV2 = (function() {
       footerText = `<span>Status: Terpasang Aktif</span><span>Tempa di Kaelen</span>`;
     } else if (source === 'shop') {
       footerText = `<span>Harga Beli: ${item.price || 100} Gold</span><span>Klik Beli untuk mengambil</span>`;
+    } else if (source === 'bounty') {
+      footerText = `<span>Hadiah Eksklusif Buronan</span><span>Tumpas target untuk mengklaim</span>`;
     }
 
     tip.innerHTML = `
@@ -2188,7 +2195,8 @@ window.EverDeeperV2 = (function() {
       document.getElementById('charDetails').innerHTML = `
         <div>Max HP: <b>${stats.maxHp}</b> | Max Poise: <b>${stats.maxPoise}</b></div>
         <div>ATK: <b>${stats.atk}</b> | DEF: <b>${stats.def}</b></div>
-        <div>Critical Chance: <b>${Math.round(stats.critChance * 100)}%</b> | Movement: <b>${stats.moveRange} petak</b></div>
+        <div>STR: <b>${stats.str}</b> | AGI: <b>${stats.agi}</b> | INT: <b>${stats.int}</b></div>
+        <div>Crit: <b>${Math.round(stats.critChance * 100)}%</b> | Dodge: <b>${Math.round((stats.dodgeChance || 0) * 100)}%</b> | Gerak: <b>${stats.moveRange} petak</b></div>
       `;
 
       // Build Specialization Selector
@@ -2272,7 +2280,8 @@ window.EverDeeperV2 = (function() {
     document.getElementById('charDetails').innerHTML = `
       <div>Max HP: <b>${stats.maxHp}</b> | Max Poise: <b>${stats.maxPoise}</b></div>
       <div>ATK: <b>${stats.atk}</b> | DEF: <b>${stats.def}</b></div>
-      <div>Critical Chance: <b>${Math.round(stats.critChance * 100)}%</b> | Movement: <b>${stats.moveRange} petak</b></div>
+      <div>STR: <b>${stats.str}</b> | AGI: <b>${stats.agi}</b> | INT: <b>${stats.int}</b></div>
+      <div>Crit: <b>${Math.round(stats.critChance * 100)}%</b> | Dodge: <b>${Math.round((stats.dodgeChance || 0) * 100)}%</b> | Gerak: <b>${stats.moveRange} petak</b></div>
     `;
     if (combat && combat.isActive) {
       combat.updateCombatUI();

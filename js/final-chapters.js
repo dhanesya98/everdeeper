@@ -20,8 +20,8 @@ window.FinalChapters=(()=>{
   D.BOSSES['floor_'+f].rewardItem=['crown_of_ruins','solar_seal_orb','crown_of_eternal_dawn'][f-6];
   D.BOUNTIES[f]={id:'bounty_floor_'+f,floor:f,targetKey:s.bmodel,name:s.bounty,title:'Buronan Bab '+f+' — Penagih Nama',danger:'Ancaman Abyss '+f,dangerColor:f===7?'#ed895b':'#c3a5d9',icon:'skull',modelType:s.bmodel,hp:440+(f-6)*100,poise:90+(f-6)*15,atk:40+(f-6)*6,def:15+(f-6)*3,speed:11,moveRange:3,attackRange:2,chapterPattern:s.pattern,skills:[{name:s.bossSkill}],lore:f===6?'Algojo arsip yang menghapus wajah sebelum menghapus nama.':f===7?'Perawat tungku yang mengunci jiwa pekerja dalam lentera perutnya.':'Penjaga lonceng yang memakan nama terakhir. Kalahkan dia agar rantai sumpah tidak meminta Flask atau darah.',rewardGold:1100+(f-6)*250,rewardExp:750+(f-6)*180,relicReward:s.relic};
  }
- const atlas=new Image();let texture;
- const ready=new Promise((resolve,reject)=>{atlas.onload=()=>{texture=new THREE.Texture(atlas);texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.needsUpdate=true;resolve();};atlas.onerror=()=>reject(new Error('Aset boss bab akhir gagal dimuat.'));atlas.src='assets/abyss-final-bosses.png';});
+ const atlas=new Image(),atlasSrc=window.PixelArtAssets?.['abyss-final-bosses']||'assets/abyss-final-bosses.png';let texture;
+ const ready=new Promise((resolve,reject)=>{atlas.onload=()=>{texture=new THREE.Texture(atlas);texture.magFilter=texture.minFilter=THREE.NearestFilter;texture.generateMipmaps=false;texture.needsUpdate=true;resolve();};atlas.onerror=()=>reject(new Error('Aset boss bab akhir gagal dimuat.'));atlas.src=atlasSrc;});
  GameRetro.ready=Promise.all([GameRetro.ready,ready]);
  const monster=GameModels.createMonster;
  GameModels.createMonster=function(id,boss){const i=ids.indexOf(id);if(i<0)return monster(id,boss);
@@ -77,7 +77,7 @@ window.FinalChapters=(()=>{
  window.addEventListener('DOMContentLoaded',()=>{const grid=document.querySelector('#bestiaryModal .bestiary-grid');if(!grid)return;
   document.querySelector('#bestiaryModal .bestiary-intro').textContent='Delapan belas penghuni jurang. Pelajari bentuknya sebelum lentera padam.';
   const names=[...Object.keys(specs).map(f=>D.BOSSES['floor_'+f].name),...Object.values(specs).map(s=>s.bounty)];
-  names.forEach((name,i)=>{const card=document.createElement('article'),art=document.createElement('div'),title=document.createElement('h3'),label=document.createElement('span');art.className='bestiary-art';art.style.backgroundImage='url(assets/abyss-final-bosses.png)';art.style.backgroundSize='300% 200%';art.style.backgroundPosition=(i%3)*50+'% '+Math.floor(i/3)*100+'%';title.textContent=name;label.textContent=i<3?'PENGUASA BAB '+(i+6):'BURONAN BAB '+(i+3);card.append(art,title,label);grid.append(card);});
+  names.forEach((name,i)=>{const card=document.createElement('article'),art=document.createElement('div'),title=document.createElement('h3'),label=document.createElement('span');art.className='bestiary-art';art.style.backgroundImage='url('+atlasSrc+')';art.style.backgroundSize='300% 200%';art.style.backgroundPosition=(i%3)*50+'% '+Math.floor(i/3)*100+'%';title.textContent=name;label.textContent=i<3?'PENGUASA BAB '+(i+6):'BURONAN BAB '+(i+3);card.append(art,title,label);grid.append(card);});
  });
  return {specs,progress,complete,status,interact,objectiveModel,inDanger,ready};
 })();

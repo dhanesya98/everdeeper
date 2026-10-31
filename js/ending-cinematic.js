@@ -20,8 +20,8 @@ window.EndingCinematic = (() => {
     const pause=document.createElement('button'),skip=document.createElement('button');pause.textContent='Jeda';skip.textContent='Lewati ke epilog';
     for(const b of [pause,skip]){b.className='hud-btn';controls.appendChild(b);}root.appendChild(controls);document.body.appendChild(root);skip.focus();
     const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
-    const oath=new Image();oath.src='assets/abyss-final-bosses.png';
-    const atlas=new Image(),hands=new Image();atlas.src='assets/bestiary.webp';hands.src='assets/fps-'+(['warrior','mage','rogue','archer'].includes(heroClass)?heroClass:'warrior')+'.webp';
+    const oath=new Image();oath.src=window.PixelArtAssets?.['abyss-final-bosses']||'assets/abyss-final-bosses.png';
+    const atlas=new Image(),hands=new Image();atlas.src=window.PixelArtAssets?.['bestiary']||'assets/bestiary.webp';hands.src='assets/fps-'+(['warrior','mage','rogue','archer'].includes(heroClass)?heroClass:'warrior')+'.webp';
     let elapsed=0,last=performance.now(),lastDraw=0,raf,paused=false,current=-1,finished=false;
     const reduced=window.GamePresentation?.settings.motion===false||matchMedia('(prefers-reduced-motion: reduce)').matches;
     function finish(){if(finished)return;finished=true;active=false;cancelAnimationFrame(raf);root.removeEventListener('keydown',key);root.remove();previous?.focus();onComplete();}

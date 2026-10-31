@@ -1,0 +1,5 @@
+body.mouse-look,body.mouse-look *{cursor:none!important}
+body.mouse-look .game-top-bar,body.mouse-look #gameBottomBar,body.mouse-look #combatTarget,body.mouse-look #enemyDirection{pointer-events:none!important}
+body.mouse-look #skillTooltip,body.mouse-look #bentoTooltip{display:none!important}
+#mouseCaptureBtn{position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:80;max-width:90vw;padding:12px 18px;background:#130e0ef0;color:#e5dada;border:1px solid #95534d;font:13px/1.5 'Segoe UI',sans-serif;cursor:pointer;box-shadow:0 2px 14px #0008}
+#mouseCaptureBtn[hidden]{display:none!important}

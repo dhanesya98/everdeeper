@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/audit-ui.css">
 <link rel="stylesheet" href="css/skill-loadout.css">
 <link rel="stylesheet" href="css/rarity-glow.css">
+<link rel="stylesheet" href="css/mouse-controls.css">
 </head>
 <body data-screen="title">
 
@@ -22,7 +23,7 @@
   <div id="screenVignette" class="screen-vignette"></div>
 
   <!-- WebGL 3D Canvas Container -->
-  <div id="retroCompass" aria-label="Arah pandang"></div><div id="retroCrosshair" aria-hidden="true">+</div><div id="retroMode">EKSPLORASI · Q / R PUTAR · KLIK KANAN + GESER UNTUK MELIHAT</div><div id="canvasContainer"></div>
+  <div id="retroCompass" aria-label="Arah pandang"></div><div id="retroCrosshair" aria-hidden="true">+</div><div id="retroMode">EKSPLORASI · Q / R PUTAR · MOUSE: MELIHAT · TAHAN ALT: KURSOR</div><div id="canvasContainer"></div>
 
   <!-- LANDING PAGE / TITLE SCREEN -->
   <div id="landingPage" class="landing-page-overlay">
@@ -43,7 +44,7 @@
       </div>
 
       <div class="landing-credits">
-        Main di laptop / PC · WASD bergerak · Klik kanan + geser untuk melihat
+        Main di laptop / PC · WASD bergerak · Mouse untuk melihat · Tahan Alt untuk kursor
       </div>
     </div>
 
@@ -192,7 +193,7 @@
 
   <!-- Exploration HUD -->
   <div id="exploreHud">
-    <div class="controls-hint"><span><kbd>W A S D</kbd> Bergerak</span><span><kbd>Q / R</kbd> Putar kamera</span><span><kbd>E</kbd> Interaksi</span></div>
+    <div class="controls-hint"><span><kbd>W A S D</kbd> Bergerak</span><span>Mouse: melihat</span><span><kbd>ALT</kbd> Tahan untuk kursor</span><span><kbd>E</kbd> Interaksi</span></div>
     <div class="interact-prompt" id="interactPrompt">Buka Peti (Tekan E)</div>
   </div>
 
@@ -738,6 +739,7 @@
   <script src="js/final-chapters.js"></script>
   <script src="js/forecast-layout.js"></script>
   <script src="js/enemy-patrol.js"></script>
+  <script src="js/mouse-controls.js"></script>
   <script src="js/main.js"></script>
   <script src="js/ending-cinematic.js"></script>
 

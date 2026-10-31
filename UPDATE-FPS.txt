@@ -6,7 +6,7 @@ Vanguard: perisai dan pedang; Arcanist: tangan sihir dan tongkat;
 Skirmisher: dua belati; Ranger: busur dan panah.
 
 WASD: jelajah bebas saat eksplorasi; langkah satu petak memakai AP saat combat.
-Klik kanan + geser mouse: lihat kiri/kanan dan atas/bawah.
+Gerakkan mouse: lihat kiri/kanan dan atas/bawah. Tahan Alt: tampilkan kursor dan gunakan UI; lepas Alt: kembali mouse-look.
 Q / R: putar pandangan. Klik musuh: serang dengan skill yang dipilih.
 1–5: pilih skill; G: bertahan; 6: flask; Spasi: akhir giliran.
 Aturan AP, giliran, cooldown, jarak, dan collision tetap berlaku.

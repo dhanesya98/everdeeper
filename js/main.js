@@ -19,8 +19,7 @@ window.EverDeeperV2 = (function() {
   const CAMERA_LOCKED_DISTANCE = 8; // Locked to maximum close zoom (zoom in mentok)
   let cameraDistance = CAMERA_LOCKED_DISTANCE;
   let targetCamPos = new THREE.Vector3();
-  let isRightMouseDown = false;
-  let mousePrevX = 0, mousePrevY = 0, lookPitch = -.015;
+  let lookPitch = -.015;
 
   // Active entities in current floor
   let activeEntities = [];
@@ -908,8 +907,9 @@ window.EverDeeperV2 = (function() {
     const sync=()=>{
       const next=overlays.filter(el=>getComputedStyle(el).display!=='none').pop()||null;
       modalOpen=!!next;
+      GameMouse.refresh();
       if(next===activeModal)return;
-      keys={};isRightMouseDown=false;if(heroModel)heroModel.isMoving=false;
+      keys={};if(heroModel)heroModel.isMoving=false;
       hideSkillTooltip();hideBentoTooltip();
       if(next){
         if(!activeModal)previousFocus=document.activeElement;
@@ -940,7 +940,7 @@ window.EverDeeperV2 = (function() {
 
   function setupEvents() {
     window.addEventListener('keydown', e => {
-      if (victoryPending || modalOpen || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+      if (victoryPending || modalOpen || e.altKey || GameMouse.isAltDown() || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
       if (e.repeat && !['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) return;
       keys[e.code] = true;
@@ -988,33 +988,14 @@ window.EverDeeperV2 = (function() {
       }
     });
 
-    window.addEventListener('blur', () => { keys = {}; isRightMouseDown = false; });
+    window.addEventListener('blur', () => { keys = {};  });
     window.addEventListener('keyup', e => {
       keys[e.code] = false;
     });
 
-    // Mouse drag for camera rotation
-    window.addEventListener('mousedown', e => {
-      GameAudio.resume();
-      if (e.button === 2 && e.target === renderer.domElement && !modalOpen) { // Right click
-        isRightMouseDown = true;
-        mousePrevX = e.clientX;mousePrevY=e.clientY;
-      }
-    });
-
-    window.addEventListener('mouseup', e => {
-      if (e.button === 2) isRightMouseDown = false;
-    });
-
+    window.addEventListener('mousedown', () => GameAudio.resume());
     window.addEventListener('mousemove', e => {
-      if (isRightMouseDown) {
-        cameraAim=null;
-        const deltaX = e.clientX - mousePrevX;
-        lookPitch=Math.max(-.85,Math.min(.65,lookPitch-(e.clientY-mousePrevY)*.004));mousePrevY=e.clientY;
-        cameraAngle -= deltaX * 0.006;
-        mousePrevX = e.clientX;
-      }
-
+      if(GameMouse.isLooking())return;
       // Combat Target Forecast on Hover
       if (e.target === renderer.domElement && !modalOpen && gameState === 'combat' && combat && combat.isActive) {
         mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -1080,12 +1061,18 @@ window.EverDeeperV2 = (function() {
     // Tactical Click on Enemies & Grid Tiles in Combat
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    GameMouse.init(renderer.domElement,{
+      canPlay:()=>['explore','combat'].includes(gameState)&&!modalOpen&&!victoryPending,
+      clearInput:()=>{keys={};if(heroModel)heroModel.isMoving=false;},
+      onCapture:()=>{hideSkillTooltip();hideBentoTooltip();combat?.hideTargetForecast();},
+      look:(dx,dy)=>{cameraAim=null;cameraAngle-=dx*.0028;lookPitch=Math.max(-1.2,Math.min(1.2,lookPitch-dy*.0022));},
+      attack:()=>clickCombat(null,true)
+    });
 
-    window.addEventListener('click', e => {
-      if (e.target !== renderer.domElement || modalOpen || gameState !== 'combat' || !combat.isActive || !combat.isPlayerTurn()) return;
-
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    function clickCombat(e,locked=false) {
+      if ((!locked&&e.target!==renderer.domElement)||modalOpen||gameState!=='combat'||!combat.isActive||!combat.isPlayerTurn())return;
+      mouse.x=locked?0:(e.clientX/window.innerWidth)*2-1;
+      mouse.y=locked?0:-(e.clientY/window.innerHeight)*2+1;
       raycaster.setFromCamera(mouse, camera);
 
       const hero = combat.combatants.find(c => c.isPlayer);
@@ -1124,6 +1111,7 @@ window.EverDeeperV2 = (function() {
         }
       }
 
+      if(locked)return; // Ground clicks spend movement AP only with the cursor released.
       // 2. Did player click on a grid highlight tile?
       const tileHits = raycaster.intersectObjects(combat.gridHighlights, true);
       if (tileHits.length > 0) {
@@ -1137,7 +1125,8 @@ window.EverDeeperV2 = (function() {
           combat.showSkillRange(hero, skill);
         }
       }
-    });
+    }
+    window.addEventListener('click',e=>clickCombat(e));
   }
 
   function selectSkill(skill,fireSingle=false) {
@@ -1255,7 +1244,7 @@ window.EverDeeperV2 = (function() {
     homeBtn.onclick=()=>{
       if(!saveCheckpoint())return;
       for(const key in keys)keys[key]=false;
-      isRightMouseDown=false;gameState='title';
+      gameState='title';
       document.querySelectorAll('.modal-overlay').forEach(el=>el.style.display='none');
       document.getElementById('landingPage').style.display='flex';
       document.getElementById('landingMainMenu').style.display='block';
@@ -2653,7 +2642,7 @@ window.EverDeeperV2 = (function() {
 
   function showVictoryGameModal() {
     if(window.EndingCinematic&&!EndingCinematic.active){
-      gameState='ending';for(const key in keys)keys[key]=false;isRightMouseDown=false;
+      gameState='ending';for(const key in keys)keys[key]=false;
       GameAudio.stopBattleMusic();
       EndingCinematic.play({heroClass:inventory.heroClassId,onComplete:showEndingEpilogue});
     }
@@ -2722,6 +2711,7 @@ window.EverDeeperV2 = (function() {
     requestAnimationFrame(animate);
 
     const delta = Math.min(clock.getDelta(), .05);
+    GameMouse.refresh();
     if (document.hidden) return;
     if (gameState === 'ending') return;
     const chapterHud=document.getElementById('chapterObjectiveHud');if(chapterHud){chapterHud.style.display=gameState==='explore'&&!modalOpen&&currentFloorIndex>=5?'block':'none';const text=FinalChapters.status(inventory,currentFloorIndex+1);if(chapterHud.textContent!==text)chapterHud.textContent=text;}

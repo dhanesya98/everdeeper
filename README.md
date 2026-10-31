@@ -53,7 +53,9 @@ Save berada di **localStorage browser**, bukan di ZIP. Gunakan browser/profil da
 | --- | --- |
 | WASD / tombol panah | Bergerak; saat combat, langkah per petak memakai AP |
 | Q / R | Memutar arah pandang 90 derajat |
-| Tahan klik kanan + geser | Melihat sekeliling |
+| Gerakkan mouse | Melihat sekeliling tanpa menahan tombol |
+| Tahan Alt | Tampilkan kursor dan gunakan UI; lepas untuk kembali mouse-look |
+| Escape | Lepaskan mouse; klik area game untuk melanjutkan |
 | E | Interaksi saat eksplorasi: guci, peti, NPC, prasasti, altar, tangga |
 | C / K | Menu karakter dan skill tree saat eksplorasi |
 | I | Perlengkapan dan tas saat eksplorasi |
@@ -258,3 +260,16 @@ Notifikasi item dari peti, pembelian, tempa, crafting, serta berkat muncul di te
 - HP monster biasa: multiplier 1 + 0,32d + 0,045d², d=lantai-1. DEF bertambah 2,5 per kedalaman, Poise +10% per kedalaman. Boss/buronan memakai kurva HP boss sebelumnya agar tidak ikut menggandakan HP secara berlebihan. Kontrak tetap penguat tambahan. Contoh monster biasa lantai 8: pemanah 354 HP, pemecah segel 626 HP, penjaga paduan 463 HP.
 - Forecast menampilkan estimasi dasar non-critical, bukan janji damage final; proc, passive, pertahanan khusus, dan critical dapat mengubah hasilnya.
 - Validasi: posisi depan/samping/belakang, eksekusi pada HP penuh, Eagle Eye tanpa penghitungan ganda, patroli mengejar pemain diam, boss tidak bergerak, deteksi terhalang dinding, wilayah aman, serta regresi loot/crafting/skill. Browser mengonfirmasi pergerakan -> combat otomatis, penanda arah, tanpa error. Ini bukan playthrough lengkap semua build; ultimate atau keunggulan equipment masih dapat menghasilkan one-shot pada musuh lemah.
+
+
+## Kontrol mouse FPS
+
+Gerakkan mouse untuk melihat tanpa klik kanan. Browser memakai pointer lock agar gerakan tidak berhenti di tepi layar dan kursor tersembunyi. Memilih karakter atau Lanjutkan mencoba mengaktifkannya; jika browser meminta klik, gunakan tombol di layar sekali. Klik pengaktifan ini tidak menyerang atau memakai AP.
+
+Tahan Alt untuk menampilkan kursor dan memakai HUD/hotbar/peta. Kamera berhenti mengikuti mouse selama Alt ditahan. Lepas Alt untuk kembali mouse-look. Menu/dialog otomatis melepaskan mouse; menutup menu lewat klik mengaktifkan mouse-look kembali. Jika browser meminta interaksi ulang, klik area game. Escape, pindah tab dan kehilangan fokus juga melepaskan mouse; tidak ada penguncian ulang otomatis setelah Escape.
+
+Saat mouse-look, klik kiri menyerang musuh yang terkena arah tengah layar. Klik lantai tidak memakai AP. Untuk memilih petak gerak dengan mouse, tahan Alt lalu klik petak. F/Enter tetap menyerang target aktif, Tab berganti target, dan hotkey lainnya tetap tersedia. Gerak/putar keyboard tidak diproses selama Alt ditahan; eksplorasi dan musuh tidak dijeda hanya karena Alt. Menu tetap menjeda patroli seperti sebelumnya.
+
+Validasi: pengujian mouse-look tanpa tombol kanan, kedua tombol Alt, menu, Escape, klik pertama tanpa serangan, kehilangan fokus, tab tersembunyi, penolakan pointer lock dan permintaan terlambat. Browser yang tidak mendukung pointer lock tetap dapat memakai Q/R dan kontrol UI biasa.
+
+Pengujian browser desktop: mode mouse-look dan kursor tersembunyi, serta mode kursor Alt teramati pada Chrome. Pratinjau bawaan/halaman yang tidak aktif dapat menolak pointer lock; buka game di tab browser desktop aktif dan klik tombol pengaktifan bila diperlukan.

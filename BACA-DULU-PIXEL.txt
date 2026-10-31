@@ -14,7 +14,7 @@ peluang terbaik mempertahankan save. Jangan hapus data browser.
 
 KONTROL
 WASD / tombol panah: bergerak dan menggeser posisi.
-Q / R: putar pandangan; tahan klik kanan dan geser mouse untuk melihat sekitar.
+Gerakkan mouse untuk melihat sekitar. Tahan Alt untuk kursor; lepas Alt untuk melihat lagi. Q/R tetap bisa memutar pandangan.
 E: interaksi dengan NPC, peti, altar, dan tangga.
 M / tombol Peta: tampilkan peta area yang sudah dijelajahi.
 I: perlengkapan. C: karakter. 6: flask.

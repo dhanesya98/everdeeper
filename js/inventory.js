@@ -23,6 +23,9 @@ window.GameInventory = (function() {
 
       this.items = []; // Inventory bag
       this.chapterObjectives = {};
+      this.floorStates = {};
+      this.mimicVictories = 0;
+      this.vesperFloors = [];
       this.activeSetBonuses = [];
       this.chosenBuild = 'buildA';
       this.passives = [];
@@ -44,6 +47,9 @@ window.GameInventory = (function() {
 
     reset(heroClassId) {
       this.chapterObjectives = {};
+      this.floorStates = {};
+      this.mimicVictories = 0;
+      this.vesperFloors = [];
       this.abyssContract = 0;
       this.savedDepth = 0;
       delete this.currentHp;
@@ -581,7 +587,10 @@ window.GameInventory = (function() {
     // Save state to localStorage
     saveToStorage() {
       try {
+        if(typeof this.worldProvider==='function')this.worldProvider();
         const data = {
+          saveVersion:3,
+          floorStates:this.floorStates||{},
           heroClassId: this.heroClassId,
           currentHp: Number.isFinite(this.currentHp)?this.currentHp:this.getComputedStats().maxHp,
           chosenBuild: this.chosenBuild,
@@ -599,6 +608,8 @@ window.GameInventory = (function() {
           abyssContract: this.abyssContract || 0,
           savedDepth: this.savedDepth || 0,
           chapterObjectives: this.chapterObjectives || {},
+          mimicVictories: this.mimicVictories || 0,
+          vesperFloors: this.vesperFloors || [],
           equipped: this.equipped,
           items: this.items,
           floorShops: this.floorShops || {},
@@ -622,6 +633,10 @@ window.GameInventory = (function() {
         const raw = localStorage.getItem('ever_deeper_v2_save');
         if (!raw) return false;
         const data = JSON.parse(raw);
+        this.floorStates={};
+        for(let f=1;f<=RPG_DATA.FLOORS.length;f++){const s=data.floorStates?.[f];if(window.FloorState?.valid(s,f))this.floorStates[f]=s;}
+        this.mimicVictories = Math.max(0,Math.floor(Number(data.mimicVictories)||0));
+        this.vesperFloors = [...new Set((Array.isArray(data.vesperFloors)?data.vesperFloors:[]).filter(f=>Number.isInteger(f)&&f>=2&&f<=8))];
         this.heroClassId = data.heroClassId || 'warrior';
         this.chosenBuild = data.chosenBuild || 'buildA';
         this.passives = data.passives || [];

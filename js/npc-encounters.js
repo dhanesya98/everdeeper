@@ -6,6 +6,13 @@
     dialogues:[{topic:'Aturan Pasar Gelap',text:'Stokku terbatas: Legendary dan Mythic, satu salinan per barang pada lantai ini. Tidak ada pengacakan ulang. Relik buronan dan hasil tungku Kaelen tidak kuperdagangkan.'},{topic:'Jejak Liora',text:'Ada gadis berpita merah yang menolak menjual lenteranya kepadaku. Katanya, ada janji yang tidak bisa dibayar dengan emas.'}]
   };
   const proto=GameInventory.InventoryManager.prototype;
+  proto.getVesperFloors=function(){
+    if(this.vesperFloors?.length)return this.vesperFloors;
+    const current=Math.min(8,Math.max(1,(this.savedDepth||0)+1)),floors=[];
+    for(const window of [[2,3,4],[5,6,7]]){const remaining=window.filter(f=>f>=current);if(remaining.length)floors.push(remaining[Math.floor(Math.random()*remaining.length)]);}
+    if(!floors.length)floors.push(8); // Existing saves at the final chapter still get a visit.
+    this.vesperFloors=floors;this.saveToStorage();return this.vesperFloors;
+  };
   proto.getBlackMarket=function(floor) {
     const key=String(floor);
     this.blackMarkets ||= {};

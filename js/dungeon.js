@@ -7,7 +7,7 @@ window.GameDungeon = (function() {
   const TILE_SIZE = 1.4; // 3D units per grid cell
 
   class DungeonLevel {
-    constructor(floorData) {
+    constructor(floorData, savedState=null) {
       this.floorData = floorData;
       this.width = 38;
       this.height = 38;
@@ -24,8 +24,10 @@ window.GameDungeon = (function() {
       this.bossSpawn = null;
       this.stairsPos = null;
 
-      this.initGrid();
-      this.generateRooms();
+      if(!window.FloorState?.restore(this,savedState)){
+        this.initGrid();
+        this.generateRooms();
+      }
       this.build3DScene();
     }
 
@@ -189,8 +191,10 @@ window.GameDungeon = (function() {
       const encounterRooms = this.rooms.filter(room => room !== startRoom && room !== bossRoom && room !== bestBountyRoom);
       const shuffle = list => { for (let i=list.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; } return list; };
       shuffle(encounterRooms);
-      const roll = Math.random(), count = roll < .20 ? 0 : roll < .75 ? 1 : 2;
-      const visitors = shuffle(['eloria_alchemist','valen_lorekeeper','malakor_shade','vesper_broker']);
+      const scheduled=this.floorData.vesperScheduled===true;
+      const roll = Math.random(), count = Math.max(scheduled?1:0,roll < .20 ? 0 : roll < .75 ? 1 : 2);
+      const visitors = shuffle(['eloria_alchemist','valen_lorekeeper','malakor_shade']);
+      if(scheduled)visitors.unshift('vesper_broker');
       const encounters = new Map(encounterRooms.slice(0,count).map((room,i)=>[room,visitors[i]]));
 
       // Intermediate rooms: spawn monsters, elites, chests, altars
@@ -559,6 +563,7 @@ window.GameDungeon = (function() {
       for (let j = 0; j < entities.length; j++) {
         const ent = entities[j];
         if (!ent.model) continue;
+        if(ent.defeated){ent.model.visible=false;continue;}
 
         const dist = Math.hypot(ent.gx - heroGx, ent.gz - heroGz);
         if (ent.type === 'monster' || ent.type === 'boss' || ent.type === 'bounty_target') {

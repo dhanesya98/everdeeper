@@ -5,6 +5,29 @@ RPG dark fantasy bergaya pixel dengan eksplorasi **orang pertama (FPS)** dan per
 Ikuti jejak Liora menuju dasar Abyss, temukan rahasia sumpah ayah, dan bantu para tawanan pulang. Versi ini memiliki **empat kelas, delapan bab, build campuran, serta kontrak tantangan opsional**.
 
 
+
+## Sprite arah, deteksi musuh, dan save dunia
+
+- Monster dan NPC memiliki tampilan depan, samping, dan belakang sesuai arah hadapnya. Tampilan kiri mencerminkan sprite samping. Sprite tetap memakai atlas bersama; tidak menambah model 3D atau lampu.
+- Musuh berpatroli, curiga ketika mendengar langkah dekat, mengejar setelah mendeteksi pemain, lalu mencari di posisi terakhir yang diketahui selama sekitar enam detik sebelum kembali berpatroli. Pandangan memiliki sudut terbatas dan terhalang dinding. Boss tetap di arenanya.
+- Saat eksplorasi, arahkan crosshair ke musuh dekat lalu tekan **F** atau klik kiri untuk memulai serangan. Sergapan dari belakang memberi pemain giliran pertama; bonus posisi tetap mengikuti aturan combat dan batas burst.
+- Save menyimpan tata ruang setiap lantai yang dikunjungi, posisi/arah pandang pemain, posisi serta kondisi musuh, lokasi NPC, peti terbuka, guci pecah, fog, boss yang dikalahkan, dan tangga terbuka. **Simpan & Home** lalu Continue mengembalikan posisi terakhir. Autosave berlangsung sekitar setiap enam detik ketika eksplorasi aman, serta pada titik perubahan penting.
+- Giliran combat yang sedang berlangsung belum disimpan. Menutup game saat bertarung kembali ke checkpoint sebelum pertarungan; mencoba lagi setelah mati mulai dari camp. Save lama tetap memuat gear dan lantai terakhir, tetapi peta lama yang belum pernah disimpan oleh versi ini dibuat sekali saat pertama dimuat.
+- Menyelesaikan epilog lalu memulai perjalanan kembali membuat dunia baru sambil mempertahankan equipment. Save tetap lokal pada browser dan alamat yang sama.
+- Validasi: 96 peta dari delapan lantai untuk penyimpanan dunia; 28 model untuk pemilihan sprite arah; deteksi, pencarian dan migrasi save diperiksa otomatis. Alur Simpan & Home → reload → Continue diuji di browser untuk posisi, peta, NPC, peti, boss dan tangga.
+
+## Crafting Mimic, jadwal Vesper, dan karakter baru
+
+- Setiap kemenangan Mimic memberi satu relik eksklusif yang dijamin masuk tas: Taring Rahang Mimic, lalu Karapas Peti Hidup, lalu Inti Lapar Mimic; siklus berulang tiap tiga kemenangan. Urutan tersimpan saat save/load. Ketiganya juga bisa dipakai sebagai relik universal. Drop Lidah Mimic Keberuntungan (peluang 65%) dan loot acak sebelumnya tetap ada.
+- Kaelen, tab Layanan Spesial: Taring + Inti menjadi senjata Mythic khusus class (580 Gold); Karapas + Inti menjadi armor Mythic khusus class (520 Gold). Ada empat senjata dan empat armor, masing-masing dengan syarat class. Hanya resep yang cocok dengan class saat ini ditampilkan dan dapat dibuat.
+- Lidah Mimic Keberuntungan + Inti menjadi Meterai Peti Pemakan Emas (Mythic, universal, 460 Gold): +18 ATK, +35 HP, +12% CRIT, +45% Gold saat dipakai. Bonus relik lama diganti, bukan ditumpuk. Lidah dari save lama tetap dapat digunakan dalam resep.
+- Kedua bahan harus ada di tas; yang sedang dipakai harus dilepas. Bahan dan Gold habis setelah konfirmasi. Hasil masuk tas, level tempa tertinggi diwariskan sampai +10. Bahan Mimic dan seluruh hasil crafting ini tidak dijual oleh Kaelen/Vesper dan tidak masuk drop acak umum.
+- Senjata: Pedang Rahang Peti (Vanguard), Tongkat Inti Pelahap (Arcanist), Belati Kembar Pemakan Emas (Skirmisher), Busur Taring Peti Hidup (Ranger). Armor: Zirah Karapas Peti Hidup, Jubah Selubung Mimic, Mantel Kulit Peniru, Selubung Pemburu Peti. Stat disusun sebagai pilihan tradeoff terhadap gear puncak yang sudah ada; batas burst tetap berlaku.
+- Vesper kini mempunyai jadwal acak yang disimpan per ekspedisi: satu lantai dari 2–4, dan satu dari 5–7. Pada lantai terjadwal ia dijamin ditempatkan sekali di ruangan jelajah acak di luar camp, arena boss dan buronan. NPC lain tetap acak. Stok pasar gelap dan pembelian tetap tersimpan per lantai, tanpa refresh.
+- Save lama dibuatkan jadwal pada bagian kampanye yang belum terlewat; save yang sudah di lantai 8 mendapat kunjungan lantai 8. Memulai ekspedisi baru membuat jadwal baru. Di Kaelen, buka percakapan Jejak Vesper untuk mengetahui lantai persinggahannya atau petunjuk ketika ia ada di lantai saat ini. Posisi ruangan tersimpan bersama kondisi lantai.
+- Enam sprite asli pada assets/abyss-characters-v2.png: Vesper, Liora, tawanan bebas, Pemanah Sumpah, Pemecah Segel, Penjaga Paduan. Vesper memakai sprite dan portrait sendiri; Liora/tawanan dipakai di ending; tiga monster spesialis memakai modelType terpisah dan masuk bestiari. Portrait buronan akhir juga diarahkan ke atlas yang tepat. Tampilan samping dan belakang memakai atlas tambahan; semua memakai nearest filtering tanpa mipmap. Atlas tambahan diperkecil sekali saat dimuat menjadi 256 piksel per karakter (sekitar 14 MiB tekstur GPU tambahan).
+- Validasi: 24 kemenangan Mimic lintas empat class, drop tepat sekali, siklus dan save/load; seluruh resep universal/class, proteksi bahan terpakai, tempa warisan dan pengecualian toko; 160 peta dengan Vesper terjadwal serta migrasi save akhir. Tes 400 peta NPC tetap terjangkau dan tidak tumpang tindih. Enam sprite, crop portrait, UV dan satu tekstur bersama diperiksa. Browser: resep Kaelen dan toko Vesper tampil tanpa error. Audit 586.920 skenario serta uji burst 7.600 skenario tetap lulus; 512.520 skenario sebelum gear puncak tanpa one-shot.
+
 ## Balancing aktif: hasil audit semua build
 
 Aturan di bagian ini menggantikan angka balancing dalam catatan pembaruan lama di bawah.
@@ -45,7 +68,7 @@ Save berada di **localStorage browser**, bukan di ZIP. Gunakan browser/profil da
 - Save lama mempertahankan equipment, pembelian skill, dan SP.
 - Stat dihitung ulang memakai balancing terbaru. Eliksir lama di atas lima kali dihitung sebagai lima kali.
 - Migrasi skill mempertahankan hotbar menurut aturan lama; skill yang dahulu tertimpa tetap dimiliki dan bisa dipasang kembali.
-- Continue mengingat lantai terakhir. Tata ruang dan encounter dibuat ulang; posisi serta giliran combat tidak disimpan secara persis.
+- Continue memulihkan kondisi lantai serta posisi eksplorasi terakhir. Giliran combat aktif kembali ke checkpoint sebelum pertarungan.
 
 ## Kontrol
 
@@ -57,6 +80,7 @@ Save berada di **localStorage browser**, bukan di ZIP. Gunakan browser/profil da
 | Tahan Alt | Tampilkan kursor dan gunakan UI; lepas untuk kembali mouse-look |
 | Escape | Lepaskan mouse; klik area game untuk melanjutkan |
 | E | Interaksi saat eksplorasi: guci, peti, NPC, prasasti, altar, tangga |
+| F / klik kiri saat eksplorasi | Sergap musuh dekat yang ditunjuk crosshair |
 | C / K | Menu karakter dan skill tree saat eksplorasi |
 | I | Perlengkapan dan tas saat eksplorasi |
 | 1–5 | Memilih skill hotbar saat giliran pemain |
@@ -217,10 +241,10 @@ Ini bukan playthrough lengkap seluruh kombinasi build. Kurva kesulitan, pacing c
 ## Pertemuan NPC acak dan pasar gelap
 
 - Kaelen selalu berada dekat titik kedatangan/teleport di perkemahan awal lantai 1–8. Layanan tempa, crafting relik, toko, serta Flask tetap tersedia.
-- Eloria, Valen, Malakor, dan Vesper kini adalah pertemuan opsional. Setiap pembuatan lantai mempunyai peluang 20% tanpa NPC tambahan, 55% satu NPC, dan 25% dua NPC (dibatasi ruangan yang tersedia). Identitas, ruangan, dan petaknya diacak; tidak ada NPC ganda pada lantai yang sama.
+- Eloria, Valen, dan Malakor adalah pertemuan opsional acak. Vesper memakai jadwal acak yang dijamin muncul pada lantai persinggahannya; lihat bagian pembaruan terbaru di atas.
 - NPC opsional berada di ruangan jelajah di luar perkemahan, ruang boss, dan ruang buronan. Ruangan pertemuan tidak diisi monster. Semua titik spawn diuji dapat dijangkau dan tidak menumpuk dengan entitas lain.
 - Vesper menjual 4 barang Legendary/Mythic yang cocok class atau universal. Legendary minimal 1.200 Gold, Mythic minimal 2.200 Gold; harga dapat lebih tinggi mengikuti nilai barang. Satu stok per barang, tanpa refresh. Stok dan status terjual tersimpan per lantai; menjual kembali item tidak mengisi stok pedagang.
-- Relik khusus boss/buronan/mimic serta hasil crafting tidak masuk pasar gelap. Visual Vesper menggunakan varian atlas humanoid berjubah yang sudah ada dengan warna tembaga dan proporsi berbeda; portrait memakai sumber Malakor. Tidak menambah tekstur besar atau model berat.
+- Relik khusus boss/buronan/mimic serta hasil crafting tidak masuk pasar gelap. Visual dan portrait Vesper kini memakai atlas karakter khusus yang baru, dengan satu tekstur bersama.
 - Seperti sistem save sebelumnya, Continue membangkitkan ulang peta lantai: posisi/pertemuan NPC bisa berubah. Stok pasar gelap yang sudah dibuat tetap tersimpan.
 - Validasi: 400 peta (87 tanpa NPC opsional, 221 dengan satu, 92 dengan dua), akses spawn, tidak tumpang tindih, keempat NPC muncul dalam sampel; transaksi, pembatasan stok, save/load, dan reset untuk empat class. Bukan pengujian playthrough penuh.
 
@@ -230,7 +254,7 @@ Notifikasi item dari peti, pembelian, tempa, crafting, serta berkat muncul di te
 
 ## Ending visual dan save manual
 
-- Setelah boss lantai 8 selesai, gunakan pintu/tangga akhir untuk memulai cutscene pixel-art sekitar 32 detik: nama terakhir, penjaga memudar, perjalanan tawanan, dan fajar bersama Liora. Adegan berupa komposisi canvas 640x360, maksimal 24 fps, menggunakan sprite atlas yang sudah ada (representasi Liora memakai varian sprite alchemist dengan pita merah). Belum berupa animasi karakter/sinematik 3D khusus atau voice acting.
+- Setelah boss lantai 8 selesai, gunakan pintu/tangga akhir untuk memulai cutscene pixel-art sekitar 32 detik: nama terakhir, penjaga memudar, perjalanan tawanan, dan fajar bersama Liora. Adegan berupa komposisi canvas 640x360, maksimal 24 fps, menggunakan atlas karakter baru dengan sprite Liora dan tawanan tersendiri. Belum berupa animasi karakter/sinematik 3D khusus atau voice acting.
 - Jeda/Lanjutkan tersedia; Lewati atau Escape membuka epilog. Setelah epilog, tombol kembali ke Gerbang Abu memulai penjelajahan lantai 1 dengan equipment tetap. Render dungeon berhenti selama cutscene; frame loop ending dibersihkan setelah selesai. Mendukung pengurangan gerakan.
 - Tombol **Simpan** dan **Simpan & Home** menyimpan checkpoint lantai dan progres karakter. Hanya tersedia saat aman, bukan saat combat/ending. Tombol Lanjutkan menampilkan nomor lantai save; kegagalan penyimpanan memberi pesan dan membatalkan kembali ke Home.
 - Save masih menggunakan localStorage browser dan alamat game yang sama. Continue kembali ke perkemahan lantai tersimpan dengan peta baru, bukan posisi atau kondisi persis tiap musuh/peti. Jangan berpindah browser/origin jika ingin membaca save yang sama. Mulai Ekspedisi Baru mengganti save lama.

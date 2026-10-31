@@ -53,6 +53,7 @@ window.GameRetro = (() => {
   function setMode(dungeon,next){
     mode=next;document.body.dataset.view=next;
     if(dungeon===lastDungeon&&next===lastMode)return;
+    if(dungeon!==lastDungeon)mapCell='';
     lastDungeon=dungeon;lastMode=next;
     if(!dungeon.retroCeiling){const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(dungeon.width*1.4,dungeon.height*1.4),new THREE.MeshBasicMaterial({color:0x1e2527,map:stoneMaps.wall,side:THREE.DoubleSide}));ceiling.rotation.x=Math.PI/2;ceiling.position.y=2.69;dungeon.group.add(ceiling);dungeon.retroCeiling=ceiling;}
     dungeon.retroCeiling.visible=next==='first-person'||next==='combat-first-person';

@@ -294,7 +294,6 @@ window.GameCombat = (function() {
       if (this.inventory && this.inventory.isVulnerableNextCombat) {
         heroUnit.isCursedVulnerable = true;
         this.inventory.isVulnerableNextCombat = false;
-        this.inventory.saveToStorage();
         this.showFloatingText(heroUnit, 'Kutukan Kerentanan Aktif (+25% DMG)', 0xef4444);
         this.logCombat('Kutukan Altar Aktif: Pahlawan menerima +25% damage lebih tinggi di pertempuran ini!', 'skull');
       }
@@ -414,6 +413,9 @@ window.GameCombat = (function() {
         const speedB = (b.stats.agi || b.stats.speed || 10) + Math.random() * 5;
         return speedB - speedA;
       });
+      const rearAmbush=this.combatants.some(c=>!c.isPlayer&&c.data.playerAmbush&&AbyssBalance.position(heroUnit,c)==='back');
+      for(const c of this.combatants)if(!c.isPlayer)delete c.data.playerAmbush;
+      if(rearAmbush){this.combatants.splice(this.combatants.indexOf(heroUnit),1);this.combatants.unshift(heroUnit);this.logCombat('Sergapan dari belakang! Kamu mendapat giliran pertama.','dagger');}
 
       this.logCombat(`Pertarungan taktis dimulai! Inisiatif tertinggi: ${this.combatants[0].name}`, 'sword');
       this.calculateEnemyIntents();
@@ -640,6 +642,7 @@ window.GameCombat = (function() {
             // Abyssal Mimic Defeated
             goldGained += 120;
             expGained += 85;
+            if(window.RelicCrafting)lootGained.push(RelicCrafting.mimicDrop(this.inventory));
             const tongueRelic = RPG_DATA.ITEMS.find(i => i.id === 'mimic_lucky_tongue');
             if (tongueRelic && Math.random() < 0.65) {
               lootGained.push({ ...tongueRelic });

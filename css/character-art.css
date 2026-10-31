@@ -1,0 +1,5 @@
+.modal-window .bounty-portrait-frame[data-creature="ink_executioner"],.modal-window .bounty-portrait-frame[data-creature="ash_widow"],.modal-window .bounty-portrait-frame[data-creature="bell_devourer"]{background-image:url('../assets/abyss-final-bosses.png')!important;background-size:300% 200%!important}
+.modal-window .bounty-portrait-frame[data-creature="ink_executioner"]{background-position:0% 100%!important}
+.modal-window .bounty-portrait-frame[data-creature="ash_widow"]{background-position:50% 100%!important}
+.modal-window .bounty-portrait-frame[data-creature="bell_devourer"]{background-position:100% 100%!important}
+.modal-window .bounty-portrait-frame[data-creature="dragon"]{background-position:100% 33.3333%!important}

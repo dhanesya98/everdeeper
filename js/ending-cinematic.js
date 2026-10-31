@@ -30,6 +30,8 @@ window.EndingCinematic = (() => {
     root.addEventListener('keydown',key);
     const rect=(x,y,w,h,color)=>{ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h);};
     function figure(x,y,scale,liora=false){
+      const original=window.GameCharacterArt?.image;
+      if(original?.complete&&original.naturalWidth){const index=liora?1:2,h=85*scale,w=h;ctx.save();ctx.globalAlpha=liora?1:.75;ctx.drawImage(original,(index%3)*original.width/3,0,original.width/3,original.height/2,x-w/2,y-h+14*scale,w,h);ctx.restore();return;}
       if(atlas.complete&&atlas.naturalWidth){
         const index=liora?13:14,h=85*scale,w=h;
         ctx.save();ctx.globalAlpha=liora?1:.65;

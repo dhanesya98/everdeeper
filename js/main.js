@@ -28,6 +28,7 @@ window.EverDeeperV2 = (function() {
   let lastFogCell = "";
   let backdropFrame = 0;
   let victoryPending=false;
+  let loadingFloor=false,worldReady=false,lastWorldSave=0;
   let cameraAim=null;
 
   function init() {
@@ -98,11 +99,22 @@ window.EverDeeperV2 = (function() {
     inventory = new GameInventory.InventoryManager('warrior');
     // Try loading existing save
     inventory.loadFromStorage();
+    inventory.worldProvider=captureWorld;
   }
 
-  function loadFloor(floorIdx) {
-    currentFloorIndex = floorIdx;
-    if (gameState !== 'title') { inventory.savedDepth = floorIdx; inventory.saveToStorage(); }
+  function captureWorld(){
+    if(loadingFloor||!worldReady||!dungeon||!heroModel||['title','ending','gameover'].includes(gameState)||combat?.isActive)return;
+    const h=combat?.combatants.find(c=>c.isPlayer);
+    const proxy=gameState==='combat'&&h?{position:dungeon.gridToWorld(h.gx,h.gz)}:heroModel;
+    if(gameState==='combat'&&h?.hp>0)inventory.currentHp=h.hp;
+    inventory.floorStates[dungeon.floorData.floor]=FloorState.capture(dungeon,proxy,cameraAngle,lookPitch);
+    lastWorldSave=performance.now();
+  }
+
+  function loadFloor(floorIdx,options={}) {
+    if(!options.resume&&!loadingFloor&&worldReady&&!combat?.isActive&&!['title','gameover','ending'].includes(gameState))inventory.saveToStorage();
+    loadingFloor=true;currentFloorIndex = floorIdx;
+    if(gameState!=='title')inventory.savedDepth=floorIdx;
     const floorData = RPG_DATA.FLOORS[currentFloorIndex];
 
     victoryPending=false;GameDeath.clear();GameAttack.clear();
@@ -122,7 +134,8 @@ window.EverDeeperV2 = (function() {
     scene.background.setHex(floorData.fogColor);
 
     // Build new dungeon level
-    dungeon = new GameDungeon.DungeonLevel(floorData);
+    const savedFloor=gameState==='title'?null:inventory.floorStates[floorData.floor];
+    dungeon = new GameDungeon.DungeonLevel({...floorData,vesperScheduled:inventory.getVesperFloors().includes(floorData.floor)},savedFloor);
     scene.add(dungeon.group);
 
     // Clean up previous combat highlight group if exists
@@ -151,6 +164,9 @@ window.EverDeeperV2 = (function() {
 
     const spawnWorld = dungeon.gridToWorld(dungeon.playerSpawn.x, dungeon.playerSpawn.z);
     heroModel.position.set(spawnWorld.x, 0, spawnWorld.z);
+    if(options.resume&&dungeon.restoredState?.player){const p=dungeon.restoredState.player,cell=dungeon.worldToGrid(p.x,p.z);
+      if(Number.isFinite(p.x)&&Number.isFinite(p.z)&&dungeon.isWalkable(cell.gx,cell.gz)){heroModel.position.set(p.x,0,p.z);if(Number.isFinite(p.angle))cameraAngle=p.angle;if(Number.isFinite(p.pitch))lookPitch=Math.max(-1.2,Math.min(1.2,p.pitch));cameraAim=null;}
+    }
     heroModel.visible = true;
     targetCamPos.copy(heroModel.position);
 
@@ -163,6 +179,8 @@ window.EverDeeperV2 = (function() {
 
     // Spawn dungeon entities
     dungeon.entities.forEach(ent => {
+      if(!ent.facing){const dx=dungeon.playerSpawn.x-ent.gx,dz=dungeon.playerSpawn.z-ent.gz;ent.facing=Math.abs(dx)>Math.abs(dz)?{dx:Math.sign(dx)||1,dz:0}:{dx:0,dz:Math.sign(dz)||-1};}
+      if(ent.defeated||(ent.type==='chest'&&ent.isMimic&&ent.opened))return;
       const wPos = dungeon.gridToWorld(ent.gx, ent.gz);
       let model = null;
 
@@ -218,6 +236,8 @@ window.EverDeeperV2 = (function() {
         model.position.set(wPos.x, 0, wPos.z);
         scene.add(model);
         ent.model = model;
+        model.userData.facing=ent.facing;
+        FloorState.prop(ent);
         activeEntities.push(ent);
       }
     });
@@ -226,7 +246,9 @@ window.EverDeeperV2 = (function() {
     GamePresentation.updateLights(1, heroModel);
 
     // Initialize Fog of War around player (Diablo Unknown Darkness)
-    dungeon.updateFogOfWar(dungeon.playerSpawn.x, dungeon.playerSpawn.z, activeEntities, 5.0);
+    FloorState.fog(dungeon,dungeon.restoredState);
+    const currentCell=dungeon.worldToGrid(heroModel.position.x,heroModel.position.z);
+    dungeon.updateFogOfWar(currentCell.gx,currentCell.gz,activeEntities,5);
 
     // Initialize Combat System
     combat = new GameCombat.CombatManager(scene, dungeon, inventory, onCombatFinished);
@@ -239,7 +261,7 @@ window.EverDeeperV2 = (function() {
     document.getElementById('floorTitle').textContent = floorData.name;
     document.getElementById('floorSubtitle').textContent = floorData.subtitle + (inventory.abyssContract ? ' · KONTRAK BARA: ATK +20%, HP +15%' : '');
     showNotification(`${GameIcons.svg('target')} Masuk ke ${floorData.name}`);
-    updateHUD();
+    updateHUD();worldReady=gameState!=='title';loadingFloor=false;if(worldReady)inventory.saveToStorage();
   }
 
   // --- EXPLORATION & MOVEMENT ---
@@ -541,6 +563,7 @@ window.EverDeeperV2 = (function() {
         inventory.applyCursedPact(deal);
         if (activeCursedAltarEntity) {
           activeCursedAltarEntity.used = true;
+          inventory.saveToStorage();
         }
         modal.style.display = 'none';
         GameAudio.playHeavyImpact();
@@ -578,6 +601,7 @@ window.EverDeeperV2 = (function() {
       }
     }
     if (!spots.length) { showNotification('Tidak ada ruang untuk penyergapan. Dekati peti dari sisi lain.'); return; }
+    inventory.saveToStorage();
     chestEntity.opened = true;
     if (chestEntity.model && chestEntity.model.lidGroup) {
       chestEntity.model.lidGroup.rotation.x = -Math.PI / 2.5;
@@ -640,7 +664,8 @@ window.EverDeeperV2 = (function() {
   // --- PETI MIMIC AMBUSH & BOUNTY NOTICE BOARD SYSTEMS ---
 
   function triggerMimicAmbush(chestEntity) {
-    if (!chestEntity) return;
+    if (!chestEntity||chestEntity.opened) return;
+    inventory.saveToStorage();
     chestEntity.opened = true;
 
     // Visual & audio surprise shock
@@ -785,6 +810,7 @@ window.EverDeeperV2 = (function() {
   function startCombatEncounter(targetEntity) {
     if(targetEntity.type==='boss'&&!FinalChapters.complete(inventory,currentFloorIndex+1)){showNotification(FinalChapters.status(inventory,currentFloorIndex+1));return;}
     EnemyPatrol.stop(activeEntities,dungeon);
+    if(targetEntity.type!=='mimic')inventory.saveToStorage();
     gameState = 'combat';
     const computedStats = inventory.getComputedStats();
     if (inventory.currentHp !== undefined) {
@@ -946,6 +972,7 @@ window.EverDeeperV2 = (function() {
       keys[e.code] = true;
 
       // Interaction key
+      if(e.code==='KeyF'&&gameState==='explore'){tryAmbush();return;}
       if (e.code === 'KeyE' && gameState === 'explore') {
         interactWithNearby();
       }
@@ -1061,14 +1088,23 @@ window.EverDeeperV2 = (function() {
     // Tactical Click on Enemies & Grid Tiles in Combat
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    window.addEventListener('pagehide',()=>{if(worldReady&&!combat?.isActive&&!['title','gameover','ending'].includes(gameState))inventory.saveToStorage();});
     GameMouse.init(renderer.domElement,{
       canPlay:()=>['explore','combat'].includes(gameState)&&!modalOpen&&!victoryPending,
       clearInput:()=>{keys={};if(heroModel)heroModel.isMoving=false;},
       onCapture:()=>{hideSkillTooltip();hideBentoTooltip();combat?.hideTargetForecast();},
       look:(dx,dy)=>{cameraAim=null;cameraAngle-=dx*.0028;lookPitch=Math.max(-1.2,Math.min(1.2,lookPitch-dy*.0022));},
-      attack:()=>clickCombat(null,true)
+      attack:()=>gameState==='explore'?tryAmbush():clickCombat(null,true)
     });
 
+    function tryAmbush(){
+      if(gameState!=='explore'||modalOpen||victoryPending)return;
+      const hero=dungeon.worldToGrid(heroModel.position.x,heroModel.position.z);raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
+      const eligible=activeEntities.filter(e=>!e.defeated&&['monster','boss','bounty_target'].includes(e.type)&&Math.abs(e.gx-hero.gx)+Math.abs(e.gz-hero.gz)<=2&&EnemyPatrol.sight(dungeon,hero,e));
+      const hits=raycaster.intersectObjects(eligible.map(e=>e.model),true);let target;
+      for(const hit of hits){target=eligible.find(e=>{let node=hit.object;while(node){if(node===e.model)return true;node=node.parent;}return false;});if(target)break;}
+      if(target){target.playerAmbush=true;startCombatEncounter(target);if(gameState==='combat'&&combat.isPlayerTurn())GameCombatGuide.attack();}
+    }
     function clickCombat(e,locked=false) {
       if ((!locked&&e.target!==renderer.domElement)||modalOpen||gameState!=='combat'||!combat.isActive||!combat.isPlayerTurn())return;
       mouse.x=locked?0:(e.clientX/window.innerWidth)*2-1;
@@ -1238,7 +1274,7 @@ window.EverDeeperV2 = (function() {
       if(gameState==='title'||gameState==='ending'||combat?.isActive||victoryPending){showNotification('Simpan manual tersedia saat aman di luar pertarungan.');return false;}
       inventory.savedDepth=currentFloorIndex;
       if(!inventory.saveToStorage()){showNotification('Save gagal. Penyimpanan browser tidak tersedia; jangan tutup game dulu.');return false;}
-      showNotification('Tersimpan — Lantai '+(currentFloorIndex+1)+'. Lanjutkan kembali ke perkemahan lantai ini.');return true;
+      showNotification('Tersimpan — Lantai '+(currentFloorIndex+1)+'. Posisi dan kondisi lantai tercatat.');return true;
     }
     saveBtn.onclick=saveCheckpoint;
     homeBtn.onclick=()=>{
@@ -1286,6 +1322,7 @@ window.EverDeeperV2 = (function() {
       btn.addEventListener('click', () => {
         const cls = btn.getAttribute('data-class');
         GameAudio.playBoonSelect();
+        loadingFloor=true;
         inventory.reset(cls);
         if (landing) landing.style.display = 'none';
         if (heroModel) GamePresentation.disposeTree(heroModel);
@@ -1308,7 +1345,7 @@ window.EverDeeperV2 = (function() {
         heroModel = GameModels.createHero(inventory.heroClassId);
         scene.add(heroModel);
         renderSkillButtons();
-        loadFloor(Math.max(0, Math.min(RPG_DATA.FLOORS.length-1, inventory.savedDepth || 0)));
+        loadFloor(Math.max(0, Math.min(RPG_DATA.FLOORS.length-1, inventory.savedDepth || 0)),{resume:true});
         showNotification(`${GameIcons.svg('scroll')} Ekspedisi dilanjutkan dari catatan lentera!`);
       });
     }
@@ -2223,9 +2260,10 @@ window.EverDeeperV2 = (function() {
     const diagContainer = document.getElementById('npcDialogueContainer');
     if (diagContainer) {
       diagContainer.innerHTML = '';
-      const dialogues = npcData.dialogues || [
+      const dialogues = [...(npcData.dialogues || [
         { topic: 'Kabar Adikku Liora', text: 'Gadis itu masih berjuang di bawah sana. Jangan berhenti, bawa terus Lentera Surya!' }
-      ];
+      ])];
+      if(npcData.id==='kaelen_smith')dialogues.push({topic:'Jejak Vesper, Pedagang Pasar Gelap',text:activeEntities.some(e=>e.type==='npc'&&e.npcId==='vesper_broker')?'Vesper berada di lantai ini. Cari ruangan jelajah di luar perkemahan, ruang boss, dan sarang buronan. Barangnya mahal; siapkan emas.':'Menurut kabar, Vesper singgah di lantai '+inventory.getVesperFloors().join(' dan ')+'. Ia berpindah ruangan, tetapi stok dagangannya tetap tercatat.'});
       dialogues.forEach((d, dIdx) => {
         const dItem = document.createElement('div');
         dItem.className = 'npc-dialogue-item';
@@ -2343,7 +2381,7 @@ window.EverDeeperV2 = (function() {
           const temperCost = 45 + (curLvl * 35);
 
           let deltaStatText = '';
-          if (currentForgeSlot === 'weapon') deltaStatText = '+4 ATK & +4 Poise';
+          if (currentForgeSlot === 'weapon') deltaStatText = '+2 ATK & +4 Poise';
           else if (currentForgeSlot === 'armor') deltaStatText = '+3 DEF, +12 Max HP & +3 Poise';
           else if (currentForgeSlot === 'offhand') deltaStatText = `+2 DEF, ${equippedItem.atk ? '+2 ATK, ' : ''}+3 Poise`;
           else if (currentForgeSlot === 'relic') deltaStatText = `${equippedItem.atk ? '+2 ATK, ' : ''}${equippedItem.def ? '+2 DEF, ' : ''}${equippedItem.hp ? '+10 HP' : '+5 Poise'}`;
@@ -2657,7 +2695,7 @@ window.EverDeeperV2 = (function() {
     document.getElementById('storyDescentRelic').textContent='Ekspedisi selesai — Liora dan para tawanan pulang.';
     const route=document.getElementById('abyssRoute');if(route)route.innerHTML='';
     const button=document.getElementById('storyContinueBtn');button.textContent='Kembali ke Gerbang Abu — lanjutkan dengan equipment saat ini';
-    button.onclick=()=>{modal.style.display='none';button.textContent='Lanjutkan';gameState='explore';loadFloor(0);};
+    button.onclick=()=>{modal.style.display='none';button.textContent='Lanjutkan';gameState='explore';loadingFloor=true;inventory.floorStates={};inventory.chapterObjectives={};loadFloor(0);};
     modal.style.display='flex';
   }
 
@@ -2713,6 +2751,7 @@ window.EverDeeperV2 = (function() {
     const delta = Math.min(clock.getDelta(), .05);
     GameMouse.refresh();
     if (document.hidden) return;
+    if(worldReady&&gameState==='explore'&&!modalOpen&&!victoryPending&&!combat?.isActive&&performance.now()-lastWorldSave>6000)inventory.saveToStorage();
     if (gameState === 'ending') return;
     const chapterHud=document.getElementById('chapterObjectiveHud');if(chapterHud){chapterHud.style.display=gameState==='explore'&&!modalOpen&&currentFloorIndex>=5?'block':'none';const text=FinalChapters.status(inventory,currentFloorIndex+1);if(chapterHud.textContent!==text)chapterHud.textContent=text;}
     // Menus only need a quiet backdrop; keep full cadence during play.

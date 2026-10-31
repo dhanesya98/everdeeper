@@ -900,11 +900,11 @@ window.RPG_DATA = (function() {
         },
         {
           topic: 'Rahasia Menempa Besi Surya',
-          text: 'Baja biasa akan getas dan hancur melawan iblis abyss. Palu tempa milikku dialiri minyak lentera suci. Setiap kali senjata ditempa (+Tempa Senjata), seranganmu akan bertambah tajam (+5 ATK), tubuhmu lebih liat (+15 HP), dan pertahananmu lebih kokoh (+2 DEF)!'
+          text: 'Baja biasa akan getas dan hancur melawan iblis abyss. Palu tempa milikku dialiri minyak lentera suci. Setiap kali perlengkapan ditempa di Meja Tempa (+1 hingga +5), seluruh stat senjata, zirah, maupun relikmu akan meningkat drastis!'
         },
         {
-          topic: 'Nasihat Menghadapi Cacing Purba (Bos Lantai 1)',
-          text: 'Cacing Purba Abyss memiliki kerak batu tebal. Jangan terburu-buru menghabiskan AP! Serang bagian kepalanya dengan jurus peremuk Poise hingga ia terkena Stance Break, barulah lancarkan tebasan pamungkasmu.'
+          topic: 'Nasihat Menghadapi Naga Muda Abyss (Bos Lantai 1)',
+          text: 'Naga Muda Abyss memiliki sisik batu tebal dan semburan bara. Jangan terburu-buru menghabiskan AP! Serang dari posisi Flank atau Backstab dengan jurus peremuk Poise hingga ia terkena Stance Break, barulah lancarkan tebasan pamungkasmu.'
         }
       ],
       serviceType: 'forge'
@@ -925,15 +925,15 @@ window.RPG_DATA = (function() {
       dialogues: [
         {
           topic: 'Jejak Pelarian Liora di Reruntuhan Beku',
-          text: 'Liora sempat berlindung di balik meja racikanku beberapa saat lalu! Ia meninggalkan pesan bahwa monster es membenci panasnya tebasan lentera. Ia melarikan diri ke celah tangga sebelum para gargoyle menyergap.'
+          text: 'Liora sempat berlindung di balik meja racikanku beberapa saat lalu! Ia meninggalkan pesan bahwa pasukan kegelapan membenci panasnya tebasan lentera. Ia melarikan diri ke celah tangga sebelum para penjaga menyergap.'
         },
         {
           topic: 'Ramuan Eliksir Surya Permanen',
-          text: 'Dengan emas dan sari embun fajar, aku dapat menyeduh Eliksir Surya Permanen untukmu! Eliksir Darah Surya memberi +25 Max HP permanen, sedangkan Ramuan Kuda-Kuda Baja memperkuat kestabilanmu dengan +15 Max Poise permanen.'
+          text: 'Dengan emas dan sari embun fajar, aku dapat menyeduh Eliksir Surya Permanen untukmu! Eliksir Darah Surya meningkatkan Max HP, sedangkan Ramuan Kuda-Kuda Baja memperkuat kestabilan Poise dan kapasitas Flask-mu secara permanen.'
         },
         {
-          topic: 'Kelemahan Raja Beku (Frost King)',
-          text: 'Raja Beku memanggil perisai es saat HP-nya berkurang. Jangan gunakan mantra es melawannya! Manfaatkan serangan fisik beruntun dan simpan AP untuk bertahan saat badai saljunya datang.'
+          topic: 'Kelemahan Raja Kegelapan (Bos Lantai 2)',
+          text: 'Raja Kegelapan mengayunkan pedang kutukan yang mampu menguras Poise dan mendorongmu mundur. Manfaatkan posisi menghindar, jaga jarak saat ia bersiap melancarkan tebasan area, dan simpan AP untuk bertahan!'
         }
       ],
       serviceType: 'alchemy'
@@ -958,11 +958,11 @@ window.RPG_DATA = (function() {
         },
         {
           topic: 'Pencerahan Rangkaian Skill Tree',
-          text: 'Buka Skill Tree milikmu (Tekan C)! Setiap tingkatan dari Tier 1 hingga Tier 4 memberikan lompatan kekuatan yang masif. Kamu bahkan bisa mereset seluruh rangkaian kapan pun untuk menyesuaikan taktik melawan bos!'
+          text: 'Buka Skill Tree milikmu (Tekan C)! Setiap tingkatan dari Tier 1 hingga Tier 4 memberikan lompatan kekuatan yang masif. Kamu dapat mengatur beban skill aktif di setiap slot sesuai taktik melawan bos!'
         },
         {
-          topic: 'Kelemahan Sang Penyihir Hampa (Void Archmage)',
-          text: 'Archmage Hampa akan menyedot Adrenaline-mu untuk memanggil tombak kristal hampa. Kuras Poise-nya dengan cepat menggunakan serangan beruntun agar serangannya gagal terpanggil!'
+          topic: 'Kelemahan Penyihir Jahat & Lich Kuno',
+          text: 'Penyihir Jahat dan Lich Kuno mampu menyedot Adrenaline serta merapalkan kutukan area. Kuras Poise mereka dengan cepat menggunakan serangan beruntun agar mantra pamungkas mereka gagal terpanggil!'
         }
       ],
       serviceType: 'rune'
@@ -2339,8 +2339,8 @@ window.RPG_DATA = (function() {
         icon: 'shield',
         desc: 'Ahli ranjau jerat dan racun mematikan. Menjerat musuh, menguras HP secara berkala, melemahkan DEF lawan yang terjebak, serta meledakkan perangkap berantai.',
         passives: [
-          { id: 'toxic_tips', name: 'Mata Panah Beracun (Toxic Tips)', desc: 'Semua serangan panah menanamkan racun berkala (3 turn DoT, 15 damage per turn).' },
-          { id: 'crippling_venom', name: 'Bisa Pelumpuh (Crippling Venom)', desc: 'Musuh yang terjerat perangkap atau terkena racun kehilangan -5 DEF dan mobilitasnya berkurang drastis.' }
+          { id: 'toxic_arrowheads', name: 'Mata Panah Beracun (Toxic Tips)', desc: 'Semua serangan panah menanamkan racun berkala (3 turn DoT, 10 damage per turn) serta +15 Max HP & +5 ATK.' },
+          { id: 'crippling_neurotoxin', name: 'Bisa Pelumpuh (Crippling Venom)', desc: 'Musuh yang terjerat perangkap atau terkena racun kehilangan -6 DEF dan jangkauan serangannya berkurang.' }
         ]
       },
       buildC: {
@@ -2349,8 +2349,8 @@ window.RPG_DATA = (function() {
         icon: 'lightning',
         desc: 'Mobilitas kilat dan kecepatan menembak ganda. Bergerak menghasilkan momentum kecepatan dan peluang melepaskan panah ganda beruntun tanpa biaya AP tambahan.',
         passives: [
-          { id: 'wind_momentum', name: 'Momentum Angin (Wind Momentum)', desc: '+1 Gerak langkah petak dan +20% Dodge Chance saat bergerak di gilirannya.' },
-          { id: 'twin_shot', name: 'Panah Ganda (Twin Shot)', desc: 'Tembakan dasar memiliki 45% peluang melepaskan panah kedua seketika dengan 60% ATK.' }
+          { id: 'wind_momentum', name: 'Momentum Angin (Wind Momentum)', desc: '+1 Gerak langkah petak, +12% Dodge Chance, dan mengaktifkan tembakan panah ganda.' },
+          { id: 'gale_agility', name: 'Kelincahan Badai (Gale Agility)', desc: 'Setiap kali berhasil menghindar (Dodge), mendapatkan +1 AP gratis dan memotong Cooldown skill 1 giliran.' }
         ]
       }
     }

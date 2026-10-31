@@ -379,7 +379,7 @@ window.EverDeeperV2 = (function() {
       if (nearby.type === 'chapter_objective') action = nearby.label + (FinalChapters.progress(inventory,currentFloorIndex+1).includes(nearby.objectiveIndex) ? ' (Selesai)' : ' — Pulihkan');
       if (nearby.type === 'urn') {
         icKey = 'chalice';
-        action = nearby.isDestroyed ? 'Pecahan Guci Kuno' : 'Hancurkan Guci Kuno';
+        action = (nearby.isDestroyed || nearby.destroyed) ? 'Pecahan Guci Kuno' : 'Hancurkan Guci Kuno';
       }
       if (nearby.type === 'bounty_board') {
         icKey = 'target';
@@ -434,8 +434,9 @@ window.EverDeeperV2 = (function() {
       return;
     }
 
-    if (ent.type === 'urn' && !ent.isDestroyed) {
+    if (ent.type === 'urn' && !ent.isDestroyed && !ent.destroyed) {
       ent.isDestroyed = true;
+      ent.destroyed = true;
       GameAudio.playPotBreak();
       const goldAmt = ent.gold || (10 + Math.floor(Math.random() * 15));
       inventory.gold += goldAmt;
@@ -455,8 +456,12 @@ window.EverDeeperV2 = (function() {
         ent.model.position.y = -10;
       }
       inventory.saveToStorage();
+      updateHUD();
     } else if (ent.type === 'npc') {
+      ent.explored = true;
+      inventory.saveToStorage();
       showNpcModal(ent.npcId);
+      updateHUD();
     } else if (ent.type === 'bounty_board') {
       showBountyBoardModal();
     } else if (ent.type === 'chest' && !ent.opened) {
@@ -487,6 +492,7 @@ window.EverDeeperV2 = (function() {
 
         showNotification(`${GameIcons.svg('chest')} Diperoleh: ${loot.name} · +${goldAmt} Gold`, loot);
         inventory.saveToStorage();
+        updateHUD();
       }
     } else if (ent.type === 'cursed_chest') {
       if (ent.opened) {
@@ -501,6 +507,7 @@ window.EverDeeperV2 = (function() {
         showCursedAltarModal(ent);
       }
     } else if (ent.type === 'shrine') {
+      ent.used = true;
       const stats = inventory.getComputedStats();
       const hero = combat.combatants ? combat.combatants.find(c => c.isPlayer) : null;
       if (hero) {
@@ -510,10 +517,14 @@ window.EverDeeperV2 = (function() {
       inventory.currentHp = stats.maxHp;
       inventory.potions = Math.min(inventory.maxPotions, inventory.potions + 2);
       GameAudio.playHeal();
+      inventory.saveToStorage();
       updateHUD();
       showNotification(`${GameIcons.svg('sun')} Altar Surya memulihkan seluruh luka & mengisi 2 Lentera Flask!`);
     } else if (ent.type === 'lore') {
+      ent.explored = true;
+      inventory.saveToStorage();
       showLoreModal(ent.loreIndex);
+      updateHUD();
     } else if (ent.type === 'stairs') {
       if (ent.locked) {
         showNotification(`${GameIcons.svg('lock')} Tangga terkunci oleh aura gelap Bos! Kalahkan bos lantai ini terlebih dahulu!`);
@@ -1171,7 +1182,7 @@ window.EverDeeperV2 = (function() {
     const hero = combat.combatants.find(c => c.isPlayer);
     if (!hero) return;
 
-    if (skill.type === 'self') {
+    if (skill.type === 'self' || skill.type === 'vault_leap' || skill.type === 'teleport_self') {
       combat.useSkill(hero, hero, skill);
     } else {
       combat.showSkillRange(hero, skill);
@@ -1222,36 +1233,6 @@ window.EverDeeperV2 = (function() {
   }
 
   // --- UI SETUP & MODALS ---
-
-  function switchHeroClass(newClassId) {
-    if (!RPG_DATA.CLASSES[newClassId]) return;
-    const oldPos = heroModel ? heroModel.position.clone() : new THREE.Vector3(0, 0, 0);
-    const oldRot = heroModel ? heroModel.rotation.y : 0;
-
-    // Remove old 3D model
-    if (heroModel) GamePresentation.disposeTree(heroModel);
-
-    inventory.heroClassId = newClassId;
-    inventory.equipped = { weapon: null, offhand: null, armor: null, relic: null };
-    inventory.items = [];
-    inventory.initStarterEquipment();
-    inventory.chosenBuild = 'buildA';
-    inventory.initBuild();
-    inventory.recalculateSets();
-
-    // Create new 3D model
-    heroModel = GameModels.createHero(newClassId);
-    heroModel.position.copy(oldPos);
-    heroModel.rotation.y = oldRot;
-    scene.add(heroModel);
-    GamePresentation.buildLights(scene);
-    GamePresentation.updateLights(1, heroModel);
-
-    renderSkillButtons();
-    updateHUD();
-    inventory.saveToStorage();
-    showNotification(`${GameIcons.svg('sword')} Kelas berhasil diubah menjadi: ${RPG_DATA.CLASSES[newClassId].name}!`);
-  }
 
   function hydrateStaticIcons(root = document) {
     if (typeof GameIcons === 'undefined') return;
@@ -1364,22 +1345,32 @@ window.EverDeeperV2 = (function() {
       });
     });
 
-    // In-Game Class Selection Modal (from Header "Ganti Kelas")
-    const classModal = document.getElementById('classSelectModal');
-    document.getElementById('classSelectBtn').addEventListener('click', () => {
-      classModal.style.display = 'flex';
-    });
-    document.getElementById('closeClassSelectBtn').addEventListener('click', () => {
-      classModal.style.display = 'none';
-    });
-    document.querySelectorAll('.select-class-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const cls = btn.getAttribute('data-class');
-        switchHeroClass(cls);
-        classModal.style.display = 'none';
-        showNotification(`${GameIcons.svg('sword')} Kelas berhasil diubah menjadi: ${RPG_DATA.CLASSES[cls].name}!`);
+    // Objective Tracker Panel Tabs & Collapse Toggle
+    const objPanel = document.getElementById('hudObjectivePanel');
+    const objCollapseBtn = document.getElementById('hudObjCollapseBtn');
+    if (objCollapseBtn && objPanel) {
+      objCollapseBtn.addEventListener('click', () => {
+        const collapsed = objPanel.classList.toggle('is-collapsed');
+        objCollapseBtn.textContent = collapsed ? '+' : '−';
+      });
+    }
+    document.querySelectorAll('[data-obj-tab]').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        const targetTab = tabBtn.getAttribute('data-obj-tab') || 'all';
+        document.querySelectorAll('[data-obj-tab]').forEach(b => b.classList.toggle('active', b === tabBtn));
+        if (objPanel) objPanel.setAttribute('data-active-tab', targetTab);
       });
     });
+
+    // Control Guide Panel Collapse Toggle
+    const ctrlGuidePanel = document.getElementById('controlGuidePanel');
+    const ctrlGuideToggle = document.getElementById('controlGuideToggleBtn');
+    if (ctrlGuideToggle && ctrlGuidePanel) {
+      ctrlGuideToggle.addEventListener('click', () => {
+        const collapsed = ctrlGuidePanel.classList.toggle('is-collapsed');
+        ctrlGuideToggle.textContent = collapsed ? '+' : '−';
+      });
+    }
 
     document.getElementById('potionBtn').addEventListener('click', useCombatPotion);
     document.getElementById('endTurnBtn').addEventListener('click', endCombatTurn);
@@ -1551,7 +1542,7 @@ window.EverDeeperV2 = (function() {
       if (guardBtn) {
         guardBtn.style.opacity = '1';
         guardBtn.style.cursor = 'pointer';
-        guardBtn.title = 'Gunakan 1 AP untuk kuda-kuda kokoh (+10 DEF, +20 Poise, -30% DMG)';
+        guardBtn.title = 'Gunakan 1 AP untuk kuda-kuda kokoh (+10 DEF & +20 Poise)';
       }
       combat.updateCombatUI();
     } else {
@@ -1612,6 +1603,130 @@ window.EverDeeperV2 = (function() {
       } else {
         bountyPill.style.display = 'none';
       }
+    }
+
+    updateObjectiveTrackerUI();
+  }
+
+  function updateObjectiveTrackerUI() {
+    const questListEl = document.getElementById('hudQuestList');
+    const todoListEl = document.getElementById('hudTodoList');
+    const bountyListEl = document.getElementById('hudBountyList');
+    if (!questListEl || !todoListEl || !bountyListEl) return;
+
+    const floorNum = currentFloorIndex + 1;
+    const floorDef = (RPG_DATA.FLOORS && RPG_DATA.FLOORS[currentFloorIndex]) || { name: `Lantai ${floorNum}`, bossKey: '' };
+    const bossDef = floorDef.bossKey && RPG_DATA.BOSSES ? RPG_DATA.BOSSES[floorDef.bossKey] : null;
+    const bossEnt = activeEntities ? activeEntities.find(e => e.type === 'boss') : null;
+    const stairsEnt = activeEntities ? activeEntities.find(e => e.type === 'stairs') : null;
+    const bossDefeated = bossEnt ? !!bossEnt.defeated : (stairsEnt ? !stairsEnt.locked : false);
+
+    // 1. QUEST LIST
+    const questItems = [];
+    if (bossDef) {
+      questItems.push({
+        done: bossDefeated,
+        label: `Kalahkan Bos: ${bossDef.name}`,
+        tag: `Lantai ${floorNum}`
+      });
+    }
+    if (floorNum >= 6 && window.FinalChapters && typeof FinalChapters.status === 'function') {
+      const doneArr = FinalChapters.progress ? FinalChapters.progress(inventory, floorNum) : [];
+      const chapDone = doneArr.length >= 2;
+      const chapText = FinalChapters.status(inventory, floorNum) || `Segel Kapitel Lantai ${floorNum}`;
+      questItems.push({
+        done: chapDone,
+        label: chapText,
+        tag: `${doneArr.length}/2`
+      });
+    }
+    questItems.push({
+      done: false,
+      label: floorNum < (RPG_DATA.FLOORS ? RPG_DATA.FLOORS.length : 8)
+        ? (bossDefeated ? 'Turuni Tangga menuju lantai berikutnya' : 'Buka segel tangga & turuni Abyss')
+        : (bossDefeated ? 'Selamatkan Liora di Singgasana!' : 'Hadapi Malakor & bebaskan Liora'),
+      tag: bossDefeated ? 'SIAP' : 'TERKUNCI'
+    });
+
+    questListEl.innerHTML = questItems.map(q => `
+      <div class="hud-obj-item ${q.done ? 'is-done' : ''}">
+        <span class="hud-obj-check">${q.done ? '✓' : '◈'}</span>
+        <span class="hud-obj-text">${q.label}</span>
+        <span class="hud-obj-badge">${q.tag}</span>
+      </div>
+    `).join('');
+
+    // 2. TO-DO LIST (Exploration & Sanctuary Checklist on current floor)
+    const chests = activeEntities ? activeEntities.filter(e => e.type === 'chest' || e.type === 'cursed_chest') : [];
+    const openedChests = chests.filter(e => e.opened).length;
+
+    const monsters = activeEntities ? activeEntities.filter(e => e.type === 'monster') : [];
+    const defeatedMonsters = monsters.filter(e => e.defeated).length;
+
+    const npcs = activeEntities ? activeEntities.filter(e => e.type === 'npc') : [];
+    const talkedNpcs = npcs.filter(e => e.explored).length;
+
+    const lores = activeEntities ? activeEntities.filter(e => e.type === 'lore') : [];
+    const readLores = lores.filter(e => e.explored).length;
+
+    const todoItems = [];
+    if (monsters.length > 0) {
+      todoItems.push({
+        done: defeatedMonsters >= monsters.length,
+        label: 'Bersihkan Penjaga Abyss',
+        tag: `${defeatedMonsters}/${monsters.length}`
+      });
+    }
+    if (chests.length > 0) {
+      todoItems.push({
+        done: openedChests >= chests.length,
+        label: 'Buka Peti Harta Lantai Ini',
+        tag: `${openedChests}/${chests.length}`
+      });
+    }
+    if (lores.length > 0) {
+      todoItems.push({
+        done: readLores >= lores.length,
+        label: 'Baca Prasasti Kenangan Liora',
+        tag: `${readLores}/${lores.length}`
+      });
+    }
+    if (npcs.length > 0) {
+      todoItems.push({
+        done: talkedNpcs > 0,
+        label: 'Kunjungi NPC Sanctuary / Pedagang',
+        tag: `${talkedNpcs}/${npcs.length}`
+      });
+    }
+    if (inventory.skillPoints > 0) {
+      todoItems.push({
+        done: false,
+        label: `Gunakan Poin Skill (C)`,
+        tag: `${inventory.skillPoints} SP`
+      });
+    }
+
+    todoListEl.innerHTML = todoItems.map(t => `
+      <div class="hud-obj-item ${t.done ? 'is-done' : ''}">
+        <span class="hud-obj-check">${t.done ? '✓' : '•'}</span>
+        <span class="hud-obj-text">${t.label}</span>
+        <span class="hud-obj-badge">${t.tag}</span>
+      </div>
+    `).join('');
+
+    // 3. BOUNTY LIST
+    const bDef = RPG_DATA.BOUNTIES && RPG_DATA.BOUNTIES[floorNum];
+    if (bDef) {
+      const isDone = inventory.isBountyCompleted(bDef.id);
+      bountyListEl.innerHTML = `
+        <div class="hud-obj-item ${isDone ? 'is-done' : 'is-bounty'}">
+          <span class="hud-obj-check">${isDone ? '✓' : '⚔'}</span>
+          <span class="hud-obj-text">${bDef.name} <small style="color:#a8998e;">(${bDef.title})</small></span>
+          <span class="hud-obj-badge">${isDone ? 'SELESAI' : `+${bDef.goldReward}G`}</span>
+        </div>
+      `;
+    } else {
+      bountyListEl.innerHTML = '';
     }
   }
 
@@ -1692,18 +1807,30 @@ window.EverDeeperV2 = (function() {
       if (item.slot === 'weapon') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 2} ATK, +${forgeLvl * 4} Poise`;
       else if (item.slot === 'armor') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 3} DEF, +${forgeLvl * 12} Max HP, +${forgeLvl * 3} Poise`;
       else if (item.slot === 'offhand') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): +${forgeLvl * 2} DEF, ${(item.atk ? `+${forgeLvl * 2} ATK, ` : '')}+${forgeLvl * 3} Poise`;
-      else if (item.slot === 'relic') forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): ${(item.atk ? `+${forgeLvl * 2} ATK, ` : '')}${(item.def ? `+${forgeLvl * 2} DEF, ` : '')}${(item.hp ? `+${forgeLvl * 10} HP` : '+5 Poise')}`;
+      else if (item.slot === 'relic') {
+        const parts = [];
+        if (item.atk) parts.push(`+${forgeLvl * 2} ATK`);
+        if (item.def) parts.push(`+${forgeLvl * 2} DEF`);
+        if (item.hp) parts.push(`+${forgeLvl * 10} HP`);
+        else parts.push(`+${forgeLvl * 5} Poise`);
+        if (item.str) parts.push(`+${forgeLvl * 2} STR`);
+        if (item.agi) parts.push(`+${forgeLvl * 2} AGI`);
+        if (item.int) parts.push(`+${forgeLvl * 2} INT`);
+        forgeBonusHtml = `Bonus Tempa (+${forgeLvl}): ${parts.join(', ')}`;
+      }
     }
 
     // Set description
     let setHtml = '';
     if (item.set && RPG_DATA.SETS && RPG_DATA.SETS[item.set]) {
       const s = RPG_DATA.SETS[item.set];
+      const desc2 = s.bonus2 || (s.bonuses && s.bonuses[2] ? s.bonuses[2].desc : '');
+      const desc4 = s.bonus4 || (s.bonuses && s.bonuses[4] ? s.bonuses[4].desc : '');
       setHtml = `
         <div class="bento-tip-set">
           <div style="font-weight:bold; color:#fde047; margin-bottom:2px;">Set: ${s.name}</div>
-          <div style="color:#fae8d4; font-size:10px;">• (2P): ${s.bonuses && s.bonuses[2] ? s.bonuses[2].desc : ''}</div>
-          <div style="color:#fae8d4; font-size:10px;">• (4P): ${s.bonuses && s.bonuses[4] ? s.bonuses[4].desc : ''}</div>
+          <div style="color:#fae8d4; font-size:10px;">• (2P): ${desc2}</div>
+          <div style="color:#fae8d4; font-size:10px;">• (4P): ${desc4}</div>
         </div>
       `;
     }
@@ -1714,6 +1841,9 @@ window.EverDeeperV2 = (function() {
     if (item.def) statRows.push(`<span>${GameIcons.svg('shield', 'fantasy-icon icon-xs')} DEF:</span><span class="bento-tip-stat-val" style="color:#93c5fd;">+${item.def}</span>`);
     if (item.hp) statRows.push(`<span>${GameIcons.svg('blood', 'fantasy-icon icon-xs')} Max HP:</span><span class="bento-tip-stat-val" style="color:#86efac;">+${item.hp}</span>`);
     if (item.poise) statRows.push(`<span>${GameIcons.svg('fortress', 'fantasy-icon icon-xs')} Poise:</span><span class="bento-tip-stat-val" style="color:#fed7aa;">+${item.poise}</span>`);
+    if (item.str) statRows.push(`<span>${GameIcons.svg('sword', 'fantasy-icon icon-xs')} STR:</span><span class="bento-tip-stat-val" style="color:#f87171;">+${item.str}</span>`);
+    if (item.agi) statRows.push(`<span>${GameIcons.svg('footsteps', 'fantasy-icon icon-xs')} AGI:</span><span class="bento-tip-stat-val" style="color:#4ade80;">+${item.agi}</span>`);
+    if (item.int) statRows.push(`<span>${GameIcons.svg('spark', 'fantasy-icon icon-xs')} INT:</span><span class="bento-tip-stat-val" style="color:#60a5fa;">+${item.int}</span>`);
     if (item.crit) statRows.push(`<span>${GameIcons.svg('lightning', 'fantasy-icon icon-xs')} Crit:</span><span class="bento-tip-stat-val" style="color:#fde047;">+${Math.round(item.crit * 100)}%</span>`);
     if (item.move) statRows.push(`<span>${GameIcons.svg('footsteps', 'fantasy-icon icon-xs')} Gerak:</span><span class="bento-tip-stat-val" style="color:#d8b4fe;">+${item.move} Petak</span>`);
 
@@ -1872,6 +2002,9 @@ window.EverDeeperV2 = (function() {
         if (item.atk) quickStats += `<span class="bento-chip atk">+${item.atk} ATK</span>`;
         if (item.def) quickStats += `<span class="bento-chip def">+${item.def} DEF</span>`;
         if (item.hp) quickStats += `<span class="bento-chip hp">+${item.hp} HP</span>`;
+        if (item.str) quickStats += `<span class="bento-chip atk">+${item.str} STR</span>`;
+        if (item.agi) quickStats += `<span class="bento-chip hp">+${item.agi} AGI</span>`;
+        if (item.int) quickStats += `<span class="bento-chip def">+${item.int} INT</span>`;
 
         slotEl.className = `equip-slot rarity-${item.rarity || 'common'}`;
         slotEl.innerHTML = `
@@ -1942,6 +2075,9 @@ window.EverDeeperV2 = (function() {
       if (item.def) statChips += `<span class="bento-chip def">+${item.def} DEF</span>`;
       if (item.hp) statChips += `<span class="bento-chip hp">+${item.hp} HP</span>`;
       if (item.poise) statChips += `<span class="bento-chip poise">+${item.poise} Poise</span>`;
+      if (item.str) statChips += `<span class="bento-chip atk">+${item.str} STR</span>`;
+      if (item.agi) statChips += `<span class="bento-chip hp">+${item.agi} AGI</span>`;
+      if (item.int) statChips += `<span class="bento-chip def">+${item.int} INT</span>`;
       if (item.crit) statChips += `<span class="bento-chip crit">+${Math.round(item.crit * 100)}% Crit</span>`;
       if (item.set) statChips += `<span class="bento-chip set">[${item.set.toUpperCase()}]</span>`;
 
@@ -2305,15 +2441,23 @@ window.EverDeeperV2 = (function() {
     if (refillBtn) {
       refillBtn.innerHTML = `<span>Isi Penuh & Pulihkan (${refillCost} Gold)</span>`;
       refillBtn.onclick = () => {
+        const stats = inventory.getComputedStats();
+        const curHp = inventory.currentHp !== undefined ? inventory.currentHp : stats.maxHp;
+        if (inventory.potions >= inventory.maxPotions && curHp >= stats.maxHp) {
+          showNotification(`${GameIcons.svg('spark')} Lentera Flask dan HP pahlawan sudah penuh!`);
+          return;
+        }
         if (inventory.gold < refillCost) {
           showNotification(`${GameIcons.svg('warning')} Gold tidak cukup untuk mengisi ulang Lentera Flask!`);
           return;
         }
         inventory.gold -= refillCost;
         inventory.potions = inventory.maxPotions;
+        inventory.currentHp = stats.maxHp;
         GameAudio.playHeal();
-        showNotification(`${GameIcons.svg('flask')} Lentera Flask terisi penuh (5/5) & energi pahlawan dipulihkan!`);
+        showNotification(`${GameIcons.svg('flask')} Lentera Flask terisi penuh (${inventory.maxPotions}/${inventory.maxPotions}) & HP dipulihkan penuh (${stats.maxHp}/${stats.maxHp})!`);
         inventory.saveToStorage();
+        updateHUD();
         renderNpcServicesAndShop(npcData);
       };
     }
@@ -2384,7 +2528,17 @@ window.EverDeeperV2 = (function() {
           if (currentForgeSlot === 'weapon') deltaStatText = '+2 ATK & +4 Poise';
           else if (currentForgeSlot === 'armor') deltaStatText = '+3 DEF, +12 Max HP & +3 Poise';
           else if (currentForgeSlot === 'offhand') deltaStatText = `+2 DEF, ${equippedItem.atk ? '+2 ATK, ' : ''}+3 Poise`;
-          else if (currentForgeSlot === 'relic') deltaStatText = `${equippedItem.atk ? '+2 ATK, ' : ''}${equippedItem.def ? '+2 DEF, ' : ''}${equippedItem.hp ? '+10 HP' : '+5 Poise'}`;
+          else if (currentForgeSlot === 'relic') {
+            const dParts = [];
+            if (equippedItem.atk) dParts.push('+2 ATK');
+            if (equippedItem.def) dParts.push('+2 DEF');
+            if (equippedItem.hp) dParts.push('+10 HP');
+            else dParts.push('+5 Poise');
+            if (equippedItem.str) dParts.push('+2 STR');
+            if (equippedItem.agi) dParts.push('+2 AGI');
+            if (equippedItem.int) dParts.push('+2 INT');
+            deltaStatText = dParts.join(', ');
+          }
 
           benchView.innerHTML = `
             <div class="forge-bench-grid">
@@ -2492,13 +2646,21 @@ window.EverDeeperV2 = (function() {
       } else if (role === 'shade') {
         if (serviceHeader) serviceHeader.innerHTML = `${GameIcons.svg('skull', 'fantasy-icon icon-xs')} Barter & Pemberkatan Arwah Abyss:`;
         if (forgeTitle) forgeTitle.innerHTML = `${GameIcons.svg('shadow', 'fantasy-icon icon-sm')} Minyak Arwah Gerhana (+100% Adrenaline Awal)`;
-        if (serviceDesc) serviceDesc.innerHTML = 'Melumuri senjata dengan esensi malam: Memberikan <b>+100% Adrenaline (Langsung Ultimate) & +15% Crit</b> pada awal pertempuran berikutnya!';
+        if (serviceDesc) serviceDesc.innerHTML = 'Melumuri senjata dengan esensi malam: Memberikan <b>+100% Adrenaline (Langsung Ultimate) & +15% Crit</b> pada awal pertempuran!';
         const shadeCost = 75;
+        const alreadyHasShadeBoon = inventory.boons && inventory.boons.includes('boon_adrenaline_surge');
         if (temperBtn) {
-          temperBtn.textContent = `Terima Minyak Arwah (${shadeCost} Gold)`;
+          temperBtn.disabled = !!alreadyHasShadeBoon;
+          temperBtn.style.opacity = alreadyHasShadeBoon ? '0.55' : '1';
+          temperBtn.style.cursor = alreadyHasShadeBoon ? 'default' : 'pointer';
+          temperBtn.textContent = alreadyHasShadeBoon ? '✓ Minyak Arwah Sudah Aktif' : `Terima Minyak Arwah (${shadeCost} Gold)`;
           temperBtn.style.background = '#6b21a8';
           temperBtn.style.borderColor = '#c084fc';
           temperBtn.onclick = () => {
+            if (inventory.boons && inventory.boons.includes('boon_adrenaline_surge')) {
+              showNotification(`${GameIcons.svg('spark')} Berkat Minyak Arwah sudah aktif pada dirimu!`);
+              return;
+            }
             if (inventory.gold < shadeCost) {
               showNotification(`${GameIcons.svg('warning')} Butuh ${shadeCost} Gold untuk minyak arwah!`);
               return;
@@ -2556,6 +2718,9 @@ window.EverDeeperV2 = (function() {
       if (item.def) statChips += `<span class="bento-chip def">+${item.def} DEF</span>`;
       if (item.hp) statChips += `<span class="bento-chip hp">+${item.hp} HP</span>`;
       if (item.poise) statChips += `<span class="bento-chip poise">+${item.poise} Poise</span>`;
+      if (item.str) statChips += `<span class="bento-chip atk">+${item.str} STR</span>`;
+      if (item.agi) statChips += `<span class="bento-chip hp">+${item.agi} AGI</span>`;
+      if (item.int) statChips += `<span class="bento-chip def">+${item.int} INT</span>`;
       if (item.crit) statChips += `<span class="bento-chip crit">+${Math.round(item.crit * 100)}% Crit</span>`;
       if (item.set) statChips += `<span class="bento-chip set">[${item.set.toUpperCase()}]</span>`;
 

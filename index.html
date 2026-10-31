@@ -178,13 +178,40 @@
     <div class="floor-info">
       <div class="floor-title" id="floorTitle">Gerbang Abu (Ash Gates)</div>
       <div class="floor-subtitle" id="floorSubtitle">Lantai 1 - Gerbang Masuk Menuju Jurang</div>
-      <button class="bounty-tracker-pill" id="bountyTrackerBtn" title="Lihat Papan Misi Buronan">
-        <span data-icon="target"></span>
-        <span id="bountyTrackerText">BURONAN: Kragor - BELUM DITUNTASKAN</span>
-      </button>
+
+      <!-- Structured Quest / To-Do / Bounty Panel -->
+      <div class="hud-objective-panel" id="hudObjectivePanel">
+        <div class="hud-obj-tabs" role="tablist" aria-label="Pelacak Objektif">
+          <button type="button" class="hud-obj-tab active" data-obj-tab="all">Semua</button>
+          <button type="button" class="hud-obj-tab" data-obj-tab="quest">Quest</button>
+          <button type="button" class="hud-obj-tab" data-obj-tab="todo">To-Do</button>
+          <button type="button" class="hud-obj-tab" data-obj-tab="bounty">Bounty</button>
+          <button type="button" class="hud-obj-collapse" id="hudObjCollapseBtn" title="Sembunyikan / Tampilkan Panel">–</button>
+        </div>
+        <div class="hud-obj-body" id="hudObjectiveBody">
+          <!-- Quest Section -->
+          <div class="hud-obj-section" data-obj-section="quest">
+            <div class="hud-obj-sec-title"><span data-icon="scroll"></span> QUEST AKTIF</div>
+            <div id="hudQuestList" class="hud-obj-list"></div>
+          </div>
+          <!-- To-Do Section -->
+          <div class="hud-obj-section" data-obj-section="todo">
+            <div class="hud-obj-sec-title"><span data-icon="spark"></span> TO-DO LIST LANTAI</div>
+            <div id="hudTodoList" class="hud-obj-list"></div>
+          </div>
+          <!-- Bounty Section -->
+          <div class="hud-obj-section" data-obj-section="bounty">
+            <div class="hud-obj-sec-title"><span data-icon="target"></span> DAFTAR BURONAN</div>
+            <div id="hudBountyList" class="hud-obj-list"></div>
+            <button class="bounty-tracker-pill" id="bountyTrackerBtn" title="Lihat Papan Misi Buronan">
+              <span data-icon="target"></span>
+              <span id="bountyTrackerText">BURONAN: Kragor - BELUM DITUNTASKAN</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="top-actions">
-      <button class="hud-btn" id="classSelectBtn"><span data-icon="sword"></span> Ganti Kelas</button>
       <button class="hud-btn" id="charBtn"><span data-icon="tree"></span> Karakter <kbd>C</kbd></button>
       <button class="hud-btn" id="invBtn"><span data-icon="bag"></span> Perlengkapan <kbd>I</kbd></button>
       <button class="hud-btn" id="visualSettingsBtn" title="Pengaturan tampilan">Tampilan</button>
@@ -194,7 +221,22 @@
 
   <!-- Exploration HUD -->
   <div id="exploreHud">
-    <div class="controls-hint"><span><kbd>W A S D</kbd> Bergerak</span><span>Mouse: melihat</span><span><kbd>ALT</kbd> Tahan untuk kursor</span><span><kbd>E</kbd> Interaksi</span><span><kbd>F</kbd> Sergap</span></div>
+    <div class="controls-hint control-guide-card" id="controlGuidePanel">
+      <div class="control-guide-header">
+        <span>CONTROL GUIDE</span>
+        <button type="button" class="control-guide-toggle" id="controlGuideToggleBtn" title="Lipat / Buka Panduan">–</button>
+      </div>
+      <div class="control-guide-grid" id="controlGuideBody">
+        <span><kbd>WASD</kbd> Bergerak</span>
+        <span><kbd>Q / R</kbd> Putar Arah</span>
+        <span><kbd>Mouse</kbd> Melihat</span>
+        <span><kbd>ALT</kbd> Tahan Kursor</span>
+        <span><kbd>E</kbd> Interaksi</span>
+        <span><kbd>F</kbd> Sergap</span>
+        <span><kbd>M</kbd> Peta</span>
+        <span><kbd>C / I</kbd> Menu</span>
+      </div>
+    </div>
     <div class="interact-prompt" id="interactPrompt">Buka Peti (Tekan E)</div>
   </div>
 
@@ -203,7 +245,7 @@
     <!-- Screen Shake Vignette & Solar Flash Overlays -->
     <div id="damageVignette" class="damage-vignette"></div>
     <div id="critFlash" class="crit-flash"></div>
-    <div id="comboBadge" class="combat-combo-badge" style="display:none;"><span data-icon="fire"></span> COMBO x1 (+10% DMG)</div>
+    <div id="comboBadge" class="combat-combo-badge" style="display:none;"><span data-icon="fire"></span> COMBO x1 (+4% DMG)</div>
     <div id="subclassStackBadge" class="combat-subclass-badge" style="display:none;"></div>
     <!-- Top Boss / Enemy Status Bar -->
     <div class="combat-top-target" id="combatEnemyBar">
@@ -318,7 +360,7 @@
 
     <!-- Turn & Item Actions -->
     <div class="turn-actions">
-      <button class="guard-btn" id="guardActionBtn" title="Gunakan 1 AP untuk kuda-kuda kokoh (+10 DEF, +20 Poise, -30% DMG)">
+      <button class="guard-btn" id="guardActionBtn" title="Gunakan 1 AP untuk kuda-kuda kokoh (+10 DEF & +20 Poise)">
         <span class="action-btn-head"><span data-icon="shield"></span> Bertahan <kbd>G</kbd></span>
         <span class="action-btn-sub">1 AP • +10 DEF</span>
       </button>
@@ -343,78 +385,6 @@
   <div class="boss-banner" id="bossBanner">
     <h2 id="bossBannerTitle">NAMA BOS</h2>
     <p id="bossBannerQuote">"Kutipan Bos"</p>
-  </div>
-
-  <!-- Class Selection Modal -->
-  <div class="modal-overlay" id="classSelectModal" style="display:none;">
-    <div class="modal-window" style="max-width:960px; text-align:center;">
-      <h2 style="font-family:var(--font-serif); color:var(--panel-accent); margin-bottom:4px; font-size:28px;">Pilih Pembawa Lentera</h2>
-      <p style="color:#a68d91; font-size:13px; margin-bottom:20px;">Tentukan takdirmu saat menuruni dinginnya jurang Abyss untuk menyelamatkan adikmu, Liora.</p>
-      
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
-        <!-- Warrior Card -->
-        <div class="class-select-card" data-class="warrior" style="background:#1c1417; border:2px solid #ef4444; border-radius:8px; padding:16px; cursor:pointer; text-align:left;">
-          <div class="menu-class-art" style="background-position:0% 0%" role="img" aria-label="warrior"></div>
-          <h3 style="margin:0 0 4px; font-size:16px; color:#fca5a5; text-align:center;">Vanguard</h3>
-          <div style="font-size:11px; color:#e5a024; text-align:center; margin-bottom:12px;">Ksatria Garda Depan</div>
-          <p style="font-size:12px; color:#d1c2c5; line-height:1.5; margin-bottom:12px;">Spesialis pertahanan kokoh, perisai baja, dan serangan penghancur Poise musuh.</p>
-          <div style="font-size:11px; line-height:1.8; color:#a68d91; background:#120c0e; padding:8px; border-radius:4px;">
-            <div><span data-icon="str"></span> STR: <b>16</b> (Tinggi)</div>
-            <div><span data-icon="agi"></span> AGI: <b>8</b> (Sedang)</div>
-            <div><span data-icon="int"></span> INT: <b>6</b> (Rendah)</div>
-            <div><span data-icon="shield"></span> HP: <b>120</b> | DEF: <b>12</b></div>
-          </div>
-          <button class="hud-btn select-class-btn" data-class="warrior" style="width:100%; margin-top:14px; background:#b91c1c; font-weight:bold;">Pilih Vanguard</button>
-        </div>
-
-        <!-- Mage Card -->
-        <div class="class-select-card" data-class="mage" style="background:#1c1417; border:2px solid #38bdf8; border-radius:8px; padding:16px; cursor:pointer; text-align:left;">
-          <div class="menu-class-art" style="background-position:33.333333333333336% 0%" role="img" aria-label="mage"></div>
-          <h3 style="margin:0 0 4px; font-size:16px; color:#bae6fd; text-align:center;">Arcanist</h3>
-          <div style="font-size:11px; color:#e5a024; text-align:center; margin-bottom:12px;">Penyihir Api Surya</div>
-          <p style="font-size:12px; color:#d1c2c5; line-height:1.5; margin-bottom:12px;">Serangan sihir jarak jauh, Fireball area (AoE), dan Supernova berkas cahaya suci.</p>
-          <div style="font-size:11px; line-height:1.8; color:#a68d91; background:#120c0e; padding:8px; border-radius:4px;">
-            <div><span data-icon="str"></span> STR: <b>5</b> (Rendah)</div>
-            <div><span data-icon="agi"></span> AGI: <b>9</b> (Sedang)</div>
-            <div><span data-icon="int"></span> INT: <b>18</b> (Sangat Tinggi)</div>
-            <div><span data-icon="shield"></span> HP: <b>85</b> | ATK: <b>28</b></div>
-          </div>
-          <button class="hud-btn select-class-btn" data-class="mage" style="width:100%; margin-top:14px; background:#0284c7; font-weight:bold;">Pilih Arcanist</button>
-        </div>
-
-        <!-- Rogue Card -->
-        <div class="class-select-card" data-class="rogue" style="background:#1c1417; border:2px solid #22c55e; border-radius:8px; padding:16px; cursor:pointer; text-align:left;">
-          <div class="menu-class-art" style="background-position:66.66666666666667% 0%" role="img" aria-label="rogue"></div>
-          <h3 style="margin:0 0 4px; font-size:16px; color:#bbf7d0; text-align:center;">Skirmisher</h3>
-          <div style="font-size:11px; color:#e5a024; text-align:center; margin-bottom:12px;">Pengintai Bayangan</div>
-          <p style="font-size:12px; color:#d1c2c5; line-height:1.5; margin-bottom:12px;">Kecepatan tinggi, jangkauan 5 petak gerak, serangan Backstab kritis, dan bom asap.</p>
-          <div style="font-size:11px; line-height:1.8; color:#a68d91; background:#120c0e; padding:8px; border-radius:4px;">
-            <div><span data-icon="str"></span> STR: <b>9</b> (Sedang)</div>
-            <div><span data-icon="agi"></span> AGI: <b>17</b> (Sangat Tinggi)</div>
-            <div><span data-icon="int"></span> INT: <b>8</b> (Sedang)</div>
-            <div><span data-icon="shield"></span> HP: <b>95</b> | CRIT: <b>22%</b></div>
-          </div>
-          <button class="hud-btn select-class-btn" data-class="rogue" style="width:100%; margin-top:14px; background:#15803d; font-weight:bold;">Pilih Skirmisher</button>
-        </div>
-
-        <!-- Archer Card -->
-        <div class="class-select-card" data-class="archer" style="background:#1c1417; border:2px solid #eab308; border-radius:8px; padding:16px; cursor:pointer; text-align:left;">
-          <div class="menu-class-art" style="background-position:100% 0%" role="img" aria-label="archer"></div>
-          <h3 style="margin:0 0 4px; font-size:16px; color:#fde047; text-align:center;">Ranger</h3>
-          <div style="font-size:11px; color:#e5a024; text-align:center; margin-bottom:12px;">Pemanah Fajar (Archer)</div>
-          <p style="font-size:12px; color:#d1c2c5; line-height:1.5; margin-bottom:12px;">Penembak jitu jarak jauh (Sniper &gt;= 3P), panah penembus baris, jerat kawat, dan lompat mundur.</p>
-          <div style="font-size:11px; line-height:1.8; color:#a68d91; background:#120c0e; padding:8px; border-radius:4px;">
-            <div><span data-icon="str"></span> STR: <b>9</b> (Sedang)</div>
-            <div><span data-icon="agi"></span> AGI: <b>16</b> (Sangat Tinggi)</div>
-            <div><span data-icon="int"></span> INT: <b>8</b> (Sedang)</div>
-            <div><span data-icon="shield"></span> HP: <b>95</b> | CRIT: <b>16%</b></div>
-          </div>
-          <button class="hud-btn select-class-btn" data-class="archer" style="width:100%; margin-top:14px; background:#ca8a04; font-weight:bold;">Pilih Ranger</button>
-        </div>
-      </div>
-
-      <button class="modal-close-btn" id="closeClassSelectBtn" style="font-size:13px; padding:8px 24px;">Batal</button>
-    </div>
   </div>
 
   <!-- Inventory & Equipment Modal -->

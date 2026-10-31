@@ -291,6 +291,10 @@ window.GameInventory = (function() {
         let itemHp = item.hp || 0;
         let itemPoise = item.poise || 0;
 
+        let itemStr = item.str || 0;
+        let itemAgi = item.agi || 0;
+        let itemInt = item.int || 0;
+
         if (itemForge > 0) {
           if (item.slot === 'weapon') {
             itemAtk += itemForge * 2;
@@ -307,6 +311,9 @@ window.GameInventory = (function() {
             if (itemAtk > 0) itemAtk += itemForge * 2;
             if (itemDef > 0) itemDef += itemForge * 2;
             if (itemHp > 0) itemHp += itemForge * 10;
+            if (itemStr > 0) itemStr += itemForge * 2;
+            if (itemAgi > 0) itemAgi += itemForge * 2;
+            if (itemInt > 0) itemInt += itemForge * 2;
           }
         }
 
@@ -315,10 +322,12 @@ window.GameInventory = (function() {
         stats.maxHp += itemHp;
         stats.maxPoise += itemPoise;
         if (item.crit) stats.critChance += item.crit;
-        if (item.str) stats.str += item.str;
-        if (item.agi) stats.agi += item.agi;
-        if (item.int) stats.int += item.int;
+        if (itemStr) stats.str += itemStr;
+        if (itemAgi) stats.agi += itemAgi;
+        if (itemInt) stats.int += itemInt;
       });
+
+      stats.dodgeBonus = 0;
 
       // Apply Set bonuses
       this.activeSetBonuses.forEach(b => {
@@ -327,12 +336,14 @@ window.GameInventory = (function() {
         }
         if (b.set === 'shadow' && b.tier === 2) {
           stats.critChance += 0.15;
+          stats.dodgeBonus += 0.15;
         }
         if (b.set === 'arcanum' && b.tier === 2) {
           stats.atk += 10;
         }
         if (b.set === 'duelist' && b.tier === 2) {
           stats.def += 6;
+          stats.dodgeBonus += 0.12;
         }
         if (b.set === 'storm' && b.tier === 2) {
           stats.moveRange += 1;
@@ -385,17 +396,23 @@ window.GameInventory = (function() {
       }
       // Archer Passives
       if (this.passives.includes('eagle_eye')) {
-        stats.critChance += 0.20;
-      }
-      if (this.passives.includes('killzone_focus')) {
+        stats.critChance += 0.15;
         stats.atk += 6;
       }
-      if (this.passives.includes('crippling_venom')) {
+      if (this.passives.includes('killzone_focus')) {
+        stats.atk += 4;
+      }
+      if (this.passives.includes('toxic_arrowheads') || this.passives.includes('toxic_tips')) {
+        stats.maxHp += 15;
+        stats.atk += 5;
+      }
+      if (this.passives.includes('crippling_neurotoxin') || this.passives.includes('crippling_venom')) {
         stats.def += 3;
       }
       if (this.passives.includes('wind_momentum')) {
         stats.moveRange += 1;
         stats.agi += 4;
+        stats.dodgeBonus += 0.12;
       }
       if (this.passives.includes('gale_agility')) {
         stats.agi += 6;
@@ -426,6 +443,7 @@ window.GameInventory = (function() {
       }
       if (this.boons.includes('boon_shadow_veil')) {
         stats.critChance += 0.12;
+        stats.dodgeBonus += 0.12;
       }
 
       // Apply Cursed Altar Pacts bonuses
@@ -437,6 +455,24 @@ window.GameInventory = (function() {
         if (this.pactBonuses.maxPoise) stats.maxPoise = Math.max(10, stats.maxPoise + this.pactBonuses.maxPoise);
         if (this.pactBonuses.maxAp) stats.maxAp = Math.max(2, (stats.maxAp || 3) + this.pactBonuses.maxAp);
       }
+
+      // Controlled scaling from bonus primary attributes (STR / AGI / INT) above class base
+      // Keeps early/mid game balanced (no one-shots) while making attribute relics & gear meaningful
+      const bonusStr = Math.max(0, (stats.str || 0) - (classDef.baseStats.str || 0));
+      const bonusAgi = Math.max(0, (stats.agi || 0) - (classDef.baseStats.agi || 0));
+      const bonusInt = Math.max(0, (stats.int || 0) - (classDef.baseStats.int || 0));
+
+      const primaryBonus = this.heroClassId === 'warrior' ? bonusStr
+        : (this.heroClassId === 'mage' ? bonusInt : bonusAgi);
+      const secondaryBonus = (bonusStr + bonusAgi + bonusInt) - primaryBonus;
+
+      stats.atk += Math.min(12, Math.floor(primaryBonus / 3)) + Math.min(6, Math.floor(secondaryBonus / 6));
+      stats.maxHp += Math.floor(bonusStr * 1.5);
+      stats.def += Math.floor(bonusStr / 5);
+      stats.critChance += Math.min(0.08, bonusAgi * 0.003);
+      stats.dodgeBonus = Math.min(0.45, (stats.dodgeBonus || 0) + Math.min(0.08, bonusAgi * 0.0025));
+      stats.maxPoise += Math.floor(bonusInt * 0.8);
+      stats.intBarrierBonus = Math.min(20, Math.floor(bonusInt * 0.8));
 
       stats.critChance = Math.min(.75, Math.max(0, stats.critChance));
       stats.hp = Number.isFinite(this.currentHp) ? Math.max(0,Math.min(stats.maxHp,this.currentHp)) : stats.maxHp;

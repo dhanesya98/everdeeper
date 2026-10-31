@@ -395,7 +395,10 @@ window.GameCombat = (function() {
         this.showFloatingText(heroUnit, '+30 Barrier Awal', 0x9b59b6);
       }
 
-      // Sets start-of-battle bonuses (Bastion 4P & Arcanum 2P)
+      // Sets & INT start-of-battle bonuses (Bastion 4P, Arcanum 2P, Bonus INT Barrier)
+      if (heroUnit.stats && heroUnit.stats.intBarrierBonus > 0) {
+        heroUnit.buffs.barrier = (heroUnit.buffs.barrier || 0) + heroUnit.stats.intBarrierBonus;
+      }
       if (this.inventory.activeSetBonuses) {
         if (this.inventory.activeSetBonuses.some(b => b.set === 'bastion' && b.tier >= 4)) {
           heroUnit.buffs.barrier = (heroUnit.buffs.barrier || 0) + 30;
@@ -494,24 +497,53 @@ window.GameCombat = (function() {
         }
       }
 
-      // Trapmaster: Poison DoT tick at start of enemy turn
-      if (!activeUnit.isPlayer && activeUnit.isPoisoned && activeUnit.poisonTurns > 0 && activeUnit.hp > 0) {
-        const pDmg = activeUnit.poisonDmg || 15;
-        activeUnit.hp = Math.max(0, activeUnit.hp - pDmg);
+      // Trapmaster / Poison Coat: Poison DoT tick at start of turn
+      if (activeUnit.isPoisoned && activeUnit.poisonTurns > 0 && activeUnit.hp > 0) {
+        const pDmg = activeUnit.isPlayer ? Math.min(12, activeUnit.poisonDmg || 10) : (activeUnit.poisonDmg || 15);
+        activeUnit.hp = Math.max(activeUnit.isPlayer ? 1 : 0, activeUnit.hp - pDmg);
         activeUnit.poisonTurns--;
         if (activeUnit.poisonTurns <= 0) activeUnit.isPoisoned = false;
         this.showFloatingText(activeUnit, `-${pDmg} Racun DoT`, 0x10b981);
         this.shakeCamera(0.1, 100);
-        this.logCombat(`Bisa racun kawat jerat membakar ${activeUnit.name} (-${pDmg} HP)!`, 'flask');
+        this.logCombat(`Bisa racun membakar ${activeUnit.name} (-${pDmg} HP)!`, 'flask');
 
-        if (activeUnit.hp <= 0) {
-
+        if (!activeUnit.isPlayer && activeUnit.hp <= 0) {
           this.logCombat(`${activeUnit.name} tewas akibat bisa racun mematikan!`, 'skull');
+          if (activeUnit.model) GameDeath.begin(this, activeUnit);
           this.updateCombatUI();
           this.currentTurnIdx = (this.currentTurnIdx + 1) % this.combatants.length;
           this.startTurn();
           return;
         }
+      }
+
+      // Pyromancer / Fireball / Meteor: Burn DoT tick at start of enemy turn
+      if (!activeUnit.isPlayer && activeUnit.isBurning && activeUnit.burnTurns > 0 && activeUnit.hp > 0) {
+        const bDmg = activeUnit.burnDmg || 14;
+        activeUnit.hp = Math.max(0, activeUnit.hp - bDmg);
+        activeUnit.burnTurns--;
+        if (activeUnit.burnTurns <= 0) activeUnit.isBurning = false;
+        this.showFloatingText(activeUnit, `-${bDmg} Terbakar DoT`, 0xf97316);
+        this.shakeCamera(0.1, 100);
+        this.logCombat(`Kobaran api membakar ${activeUnit.name} (-${bDmg} HP)!`, 'fire');
+
+        if (activeUnit.hp <= 0) {
+          this.logCombat(`${activeUnit.name} hangus terbakar oleh api Abyss!`, 'skull');
+          if (activeUnit.model) GameDeath.begin(this, activeUnit);
+          this.updateCombatUI();
+          this.currentTurnIdx = (this.currentTurnIdx + 1) % this.combatants.length;
+          this.startTurn();
+          return;
+        }
+      }
+
+      // Elite Corrupting Affix: Void Corrosion DoT tick on player
+      if (activeUnit.isPlayer && (activeUnit.corruptionStacks || 0) > 0 && activeUnit.hp > 1) {
+        const cDmg = Math.min(18, activeUnit.corruptionStacks * 6);
+        activeUnit.hp = Math.max(1, activeUnit.hp - cDmg);
+        activeUnit.corruptionStacks = Math.max(0, activeUnit.corruptionStacks - 1);
+        this.showFloatingText(activeUnit, `-${cDmg} Korosi Void`, 0xa855f7);
+        this.logCombat(`Korosi Void menggerogoti tubuh pahlawan (-${cDmg} HP)!`, 'shadow');
       }
 
       // Check Stun / Stance Break
@@ -536,6 +568,9 @@ window.GameCombat = (function() {
         if (activeUnit.isVanished) {
           activeUnit.isVanished = false;
           this.showFloatingText(activeUnit, 'Vanish Berakhir', 0xa855f7);
+        }
+        if ((activeUnit.poisonCoatTurns || 0) > 0) {
+          activeUnit.poisonCoatTurns--;
         }
         for (let sk in activeUnit.cooldowns) {
           if (activeUnit.cooldowns[sk] > 0) activeUnit.cooldowns[sk]--;
@@ -980,7 +1015,7 @@ window.GameCombat = (function() {
       const fraction=AbyssBalance.burstFraction(action.skill,target,this.inventory);
       // Reserve the next status tick so an instant hit + its first DoT tick
       // cannot bypass the same activation's burst budget.
-      const pendingDot=Math.min(5,target.corruptionStacks||0)*8+(target.isPoisoned&&target.poisonTurns>0?(target.poisonDmg||15):0);
+      const pendingDot=Math.min(5,target.corruptionStacks||0)*8+(target.isPoisoned&&target.poisonTurns>0?(target.poisonDmg||15):0)+(target.isBurning&&target.burnTurns>0?(target.burnDmg||14):0);
       const ceiling=execute&&!target.isBoss?Infinity:Math.max(1,Math.floor(target.maxHp*fraction)-pendingDot);
       const allowed=Math.max(0,Math.min(amount,ceiling-budget.spent));
       budget.spent+=allowed;
@@ -1013,49 +1048,70 @@ window.GameCombat = (function() {
       }
 
       attacker.ap -= skill.cost;
-      if (skill.cooldown) attacker.cooldowns[skill.id] = skill.cooldown;
+      if (skill.cooldown) {
+        let cdTurns = skill.cooldown;
+        if (attacker.isPlayer && this.inventory && this.inventory.heroClassId === 'mage' && this.inventory.activeSetBonuses && this.inventory.activeSetBonuses.some(b => b.set === 'arcanum' && b.tier >= 4)) {
+          cdTurns = Math.max(1, cdTurns - 1);
+        }
+        attacker.cooldowns[skill.id] = cdTurns;
+      }
       if (skill.adrenalineReq) attacker.adrenaline = 0;
 
-      // Handle Self/Buff/Vault skill
-      if (skill.type === 'self' || skill.type === 'vault_leap') {
+      // Handle Self/Buff/Vault/Teleport-Self skill
+      if (skill.type === 'self' || skill.type === 'vault_leap' || skill.type === 'teleport_self') {
         if (typeof GameModels !== 'undefined' && GameModels.spawnSkillVFX && attacker.model) {
           GameModels.spawnSkillVFX(this.scene, skill.id, attacker.model.position, attacker.model.position);
         }
-        if (skill.type === 'vault_leap') {
-          // Leap back 2 tiles opposite facing
-          const fX = attacker.facing ? attacker.facing.dx : 0;
-          const fZ = attacker.facing ? attacker.facing.dz : 1;
-          let leapDist = 2;
-          let landingX = attacker.gx - (fX * leapDist);
-          let landingZ = attacker.gz - (fZ * leapDist);
+        if (skill.type === 'vault_leap' || skill.type === 'teleport_self') {
+          const maxStep = skill.range || 2;
+          const nearestEnemy = this.combatants.filter(c => !c.isPlayer && c.hp > 0)
+            .sort((a, b) => (Math.abs(a.gx - attacker.gx) + Math.abs(a.gz - attacker.gz)) - (Math.abs(b.gx - attacker.gx) + Math.abs(b.gz - attacker.gz)))[0];
+          const fX = nearestEnemy ? Math.sign(nearestEnemy.gx - attacker.gx) : (attacker.facing ? attacker.facing.dx : 0);
+          const fZ = nearestEnemy ? Math.sign(nearestEnemy.gz - attacker.gz) : (attacker.facing ? attacker.facing.dz : 1);
+          let moved = false;
 
-          if (!this.dungeon.isWalkable(landingX, landingZ) || this.combatants.some(c => c.hp > 0 && c.gx === landingX && c.gz === landingZ)) {
-            leapDist = 1;
-            landingX = attacker.gx - (fX * leapDist);
-            landingZ = attacker.gz - (fZ * leapDist);
+          for (let d = maxStep; d >= 1 && !moved; d--) {
+            const candX = attacker.gx - (fX * d);
+            const candZ = attacker.gz - (fZ * d);
+            if (this.dungeon.isWalkable(candX, candZ) && !this.combatants.some(c => c.hp > 0 && c.gx === candX && c.gz === candZ)) {
+              attacker.gx = candX;
+              attacker.gz = candZ;
+              const wPos = this.dungeon.gridToWorld(candX, candZ);
+              if (attacker.model) attacker.model.position.set(wPos.x, 0, wPos.z);
+              moved = true;
+            }
           }
-
-          if (this.dungeon.isWalkable(landingX, landingZ) && !this.combatants.some(c => c.hp > 0 && c.gx === landingX && c.gz === landingZ)) {
-            this.moveUnit(attacker, landingX, landingZ);
-            this.showFloatingText(attacker, 'LOMPAT MUNDUR! (Vault)', 0x38bdf8);
+          if (!moved) {
+            const reachable = this.dungeon.getReachableTiles(attacker.gx, attacker.gz, maxStep)
+              .filter(t => !this.combatants.some(c => c.hp > 0 && c.gx === t.gx && c.gz === t.gz));
+            if (reachable.length > 0) {
+              if (nearestEnemy) {
+                reachable.sort((a, b) => (Math.abs(b.gx - nearestEnemy.gx) + Math.abs(b.gz - nearestEnemy.gz)) - (Math.abs(a.gx - nearestEnemy.gx) + Math.abs(a.gz - nearestEnemy.gz)));
+              }
+              const pick = reachable[0];
+              attacker.gx = pick.gx;
+              attacker.gz = pick.gz;
+              const wPos = this.dungeon.gridToWorld(pick.gx, pick.gz);
+              if (attacker.model) attacker.model.position.set(wPos.x, 0, wPos.z);
+              moved = true;
+            }
+          }
+          if (moved) {
+            this.showFloatingText(attacker, skill.type === 'teleport_self' ? 'KABUT ASAP! (Teleport)' : 'LOMPAT MUNDUR! (Vault)', 0x38bdf8);
             GameAudio.playSlash();
           }
-
-          if (skill.dodgeBuff) {
-            attacker.buffs.dodge = Math.min(0.6, (attacker.buffs.dodge || 0) + skill.dodgeBuff);
-            this.showFloatingText(attacker, `+${Math.round(skill.dodgeBuff * 100)}% Dodge`, 0x22c55e);
-          }
-          if (skill.apRefund) {
-            attacker.ap = Math.min(attacker.maxAp, attacker.ap + skill.apRefund);
-            this.showFloatingText(attacker, `+${skill.apRefund} AP Refund`, 0xfacc15);
-          }
-          this.logCombat(`${attacker.name} melompat mundur akrobatik dan meraih bonus Dodge + AP!`, 'lightning');
-          this.updateCombatUI();
-          return true;
+        }
+        if (skill.dodgeBuff) {
+          attacker.buffs.dodge = Math.min(0.65, (attacker.buffs.dodge || 0) + skill.dodgeBuff);
+          this.showFloatingText(attacker, `+${Math.round(skill.dodgeBuff * 100)}% Dodge`, 0x22c55e);
+        }
+        if (skill.apRefund) {
+          attacker.ap = Math.min(attacker.maxAp, attacker.ap + skill.apRefund);
+          this.showFloatingText(attacker, `+${skill.apRefund} AP Refund`, 0xfacc15);
         }
         if (skill.defBuff) {
           attacker.buffs.guard = (attacker.buffs.guard || 0) + skill.defBuff;
-          this.showFloatingText(attacker, `+${skill.defBuff} DEF (Brace)`, 0x3498db);
+          this.showFloatingText(attacker, `+${skill.defBuff} DEF`, 0x3498db);
           GameAudio.playShieldBlock();
         }
         if (skill.barrier) {
@@ -1065,8 +1121,22 @@ window.GameCombat = (function() {
         }
         if (skill.poiseRegen) {
           attacker.poise = Math.min(attacker.maxPoise, attacker.poise + skill.poiseRegen);
+          this.showFloatingText(attacker, `+${skill.poiseRegen} Poise`, 0x22c55e);
+        }
+        if (skill.riposteGain) {
+          attacker.riposteTokens = Math.min(3, (attacker.riposteTokens || 0) + skill.riposteGain);
+          this.showFloatingText(attacker, `+${skill.riposteGain} Riposte (${attacker.riposteTokens}/3)`, 0x38bdf8);
+        }
+        if (skill.poisonTurns) {
+          attacker.poisonCoatTurns = Math.max(attacker.poisonCoatTurns || 0, skill.poisonTurns);
+          this.showFloatingText(attacker, `Bisa Senjata (${attacker.poisonCoatTurns}T)`, 0x10b981);
+          GameAudio.playHeal();
         }
         this.logCombat(`${attacker.name} menggunakan ${skill.name}!`, 'shield');
+        if (attacker.isPlayer) {
+          const activeSkills = this.inventory.getActiveSkills ? this.inventory.getActiveSkills() : RPG_DATA.CLASSES[this.inventory.heroClassId].skills;
+          this.showSkillRange(attacker, this.selectedSkill || activeSkills[0]);
+        }
         this.updateCombatUI();
         return true;
       }
@@ -1074,13 +1144,43 @@ window.GameCombat = (function() {
       // Handle Attack skill against target
       if (!target || target.hp <= 0) return false;
 
+      // Teleport Behind Target for teleport_attack (e.g. Flash Strike / Phantom Ambush)
+      let forcedBackstab = false;
+      if (skill.type === 'teleport_attack' && attacker.isPlayer) {
+        const tf = target.facing || { dx: 0, dz: 1 };
+        const backCandidates = [
+          { gx: target.gx - tf.dx, gz: target.gz - tf.dz },
+          { gx: target.gx + 1, gz: target.gz },
+          { gx: target.gx - 1, gz: target.gz },
+          { gx: target.gx, gz: target.gz + 1 },
+          { gx: target.gx, gz: target.gz - 1 },
+          { gx: target.gx + 1, gz: target.gz + 1 },
+          { gx: target.gx - 1, gz: target.gz - 1 },
+          { gx: target.gx + 1, gz: target.gz - 1 },
+          { gx: target.gx - 1, gz: target.gz + 1 }
+        ];
+        const dest = backCandidates.find(c =>
+          (c.gx === attacker.gx && c.gz === attacker.gz) ||
+          (this.dungeon.isWalkable(c.gx, c.gz) && !this.combatants.some(u => u.hp > 0 && u.gx === c.gx && u.gz === c.gz))
+        );
+        if (dest) {
+          attacker.gx = dest.gx;
+          attacker.gz = dest.gz;
+          const wPos = this.dungeon.gridToWorld(dest.gx, dest.gz);
+          if (attacker.model) attacker.model.position.set(wPos.x, 0, wPos.z);
+        }
+        forcedBackstab = true;
+        this.showFloatingText(attacker, 'SERGAPAN BAYANGAN!', 0xc084fc);
+      }
+
       const passives = attacker.isPlayer ? ((this.inventory && this.inventory.passives) || []) : [];
       const boons = attacker.isPlayer ? ((this.inventory && this.inventory.boons) || []) : [];
       const defenderPassives = target.isPlayer ? (this.inventory.passives || []) : [];
       const previousElement = target.lastElementHit;
 
-      // Check Dodge on Target
-      if (target.buffs && target.buffs.dodge && Math.random() < target.buffs.dodge) {
+      // Check Dodge on Target (Active Buff + Passive Dodge Bonus)
+      const targetDodgeChance = Math.min(0.65, (target.buffs && target.buffs.dodge ? target.buffs.dodge : 0) + (target.isPlayer && target.stats ? (target.stats.dodgeBonus || 0) : 0));
+      if (targetDodgeChance > 0 && Math.random() < targetDodgeChance) {
         this.showFloatingText(target, 'DODGE! (Lolos)', 0x38bdf8);
         this.logCombat(`${target.name} berhasil menghindar (Dodge) dari serangan ${skill.name}!`, 'shield');
         GameAudio.playSlash();
@@ -1122,12 +1222,13 @@ window.GameCombat = (function() {
       const aimX=target.gx-attacker.gx,aimZ=target.gz-attacker.gz;
       if(aimX||aimZ)attacker.facing=Math.abs(aimX)>Math.abs(aimZ)?{dx:Math.sign(aimX),dz:0}:{dx:0,dz:Math.sign(aimZ)};
       // Check Flanking / Backstab
-      const position = AbyssBalance.position(attacker,target);
+      const position = forcedBackstab ? 'back' : AbyssBalance.position(attacker,target);
       const isBackstab = position === 'back';
       const isFlank = position === 'flank';
 
       let mult = skill.dmgMult || 1.0;
-      let critChance = attacker.stats.critChance ?? 0.1;
+      let critChance = (attacker.stats.critChance ?? 0.1) + (skill.critBonus || 0);
+      if (skill.autoCrit) critChance = 1.0;
 
       // Hero Combo / Momentum Multiplier
       if (attacker.isPlayer) {
@@ -1135,6 +1236,24 @@ window.GameCombat = (function() {
         const comboBonus = 1 + (this.comboCount * 0.04);
         mult *= comboBonus;
         this.updateComboUI();
+      }
+
+      // Set Bonuses during Attack (Blood 2P, Bastion 4P, Shadow 4P)
+      if (attacker.isPlayer && this.inventory && this.inventory.activeSetBonuses) {
+        if (this.inventory.activeSetBonuses.some(b => b.set === 'blood' && b.tier >= 2) && attacker.hp < attacker.maxHp * 0.5) {
+          mult *= 1.20;
+          skill.lifesteal = (skill.lifesteal || 0) + 0.10;
+        }
+        if (this.inventory.activeSetBonuses.some(b => b.set === 'bastion' && b.tier >= 4) && target.isStunned) {
+          mult *= 1.40;
+          this.showFloatingText(target, 'BENTENG 4P (+40% Guard Break)', 0x38bdf8);
+        }
+        if (this.inventory.activeSetBonuses.some(b => b.set === 'shadow' && b.tier >= 4) && !attacker._shadow4pUsed) {
+          attacker._shadow4pUsed = true;
+          skill.poiseDmg = (skill.poiseDmg || 15) + 30;
+          attacker.buffs.dodge = Math.min(0.65, (attacker.buffs.dodge || 0) + 0.50);
+          this.showFloatingText(attacker, 'EKSEKUTOR MALAM! (+30 Poise & Camouflage)', 0xc084fc);
+        }
       }
 
       if (isBackstab) {
@@ -1247,14 +1366,14 @@ window.GameCombat = (function() {
       }
 
       // 5. Mage: Hexbound (Corruption stacks)
-      if (attacker.isPlayer && passives.includes('abyssal_corruption')) {
+      if (attacker.isPlayer && (passives.includes('abyssal_corruption') || skill.corruptionStacks)) {
         const cStacks = skill.corruptionStacks || 1;
         target.corruptionStacks = Math.min(5, (target.corruptionStacks || 0) + cStacks);
         this.showFloatingText(target, `+${cStacks} Corruption (${target.corruptionStacks}/5)`, 0xa855f7);
       }
 
       // 6. Rogue: Shadow Stalker (Weakness Mark & 100% Crit Vanish)
-      if (attacker.isPlayer && passives.includes('anatomical_insight')) {
+      if (attacker.isPlayer && (passives.includes('anatomical_insight') || skill.markGain)) {
         let markGain = skill.markGain || 0;
         if (isBackstab) markGain = Math.max(markGain, 2);
         else if (isFlank) markGain = Math.max(markGain, 1);
@@ -1276,11 +1395,14 @@ window.GameCombat = (function() {
       }
 
       // 7. Rogue: Bladedancer (Combo Chain)
-      if (attacker.isPlayer && passives.includes('chain_flow')) {
+      if (attacker.isPlayer && (passives.includes('chain_flow') || skill.chainGain)) {
         if (attacker.lastSkillId !== skill.id) {
-          const cGain = 1;
+          const cGain = skill.chainGain || 1;
           attacker.chainCount = Math.min(4, (attacker.chainCount || 0) + cGain);
           mult *= (1 + (attacker.chainCount * 0.15));
+          if (this.inventory.activeSetBonuses && this.inventory.activeSetBonuses.some(b => b.set === 'storm' && b.tier >= 4)) {
+            critChance += attacker.chainCount * 0.08;
+          }
           this.showFloatingText(attacker, `COMBO CHAIN x${attacker.chainCount} (+${attacker.chainCount * 15}% DMG)`, 0xf59e0b);
 
           if (attacker.chainCount >= 4) {
@@ -1313,23 +1435,43 @@ window.GameCombat = (function() {
           mult *= 1.25;
           this.showFloatingText(attacker, 'SNIPER BONUS (+25%)', 0xf59e0b);
           if (passives.includes('killzone_focus')) {
-            mult *= 1.35;
+            mult *= 1.25;
           }
         }
       }
 
-      // 9. Archer: Trapmaster (Toxic Tips & Crippling Venom)
-      if (attacker.isPlayer && passives.includes('toxic_tips')) {
+      // 9. Archer: Trapmaster (Toxic Tips & Crippling Venom) & Rogue Poison Coat
+      if (attacker.isPlayer && (passives.includes('toxic_arrowheads') || passives.includes('toxic_tips') || (attacker.poisonCoatTurns || 0) > 0)) {
         target.isPoisoned = true;
         target.poisonTurns = Math.max(target.poisonTurns || 0, 3);
-        target.poisonDmg = Math.max(target.poisonDmg || 0, 15);
-        this.showFloatingText(target, '+15 Racun Berbisa DoT', 0x10b981);
+        target.poisonDmg = Math.max(target.poisonDmg || 0, 12);
+        this.showFloatingText(target, '+12 Racun Berbisa DoT', 0x10b981);
       }
 
-      // 10. Archer: Windrunner (Twin Shot Chance)
+      // 10. Archer: Windrunner (Twin Shot / Double Draw Chance)
       let triggeredTwinShot = false;
-      if (attacker.isPlayer && passives.includes('twin_shot') && Math.random() < 0.45 && !skill.isFollowUp) {
+      if (attacker.isPlayer && (passives.includes('wind_momentum') || passives.includes('twin_shot')) && Math.random() < 0.45 && !skill.isFollowUp) {
         triggeredTwinShot = true;
+      }
+
+      // Burn DoT Mechanic (Fireball Abyss / Meteor Swarm)
+      if (skill.burnDuration) {
+        target.isBurning = true;
+        target.burnTurns = Math.max(target.burnTurns || 0, skill.burnDuration);
+        target.burnDmg = Math.max(target.burnDmg || 0, 14);
+        this.showFloatingText(target, `TERBAKAR! (${target.burnTurns}T)`, 0xf97316);
+      }
+
+      // Slow & Decay Grasp Mechanic
+      if (skill.slowEffect) {
+        target.slowTurns = Math.max(target.slowTurns || 0, 2);
+        if (skill.id === 'decay_grasp') {
+          target.isRooted = true;
+          target.rootTurns = Math.max(target.rootTurns || 0, 1);
+          this.showFloatingText(target, 'TERKunci & MELAMBAT!', 0xa855f7);
+        } else {
+          this.showFloatingText(target, 'MELAMBAT! (-Gerak)', 0x38bdf8);
+        }
       }
 
       // Snare / Root Trap Mechanic
@@ -1346,6 +1488,9 @@ window.GameCombat = (function() {
 
       const baseAtk = attacker.stats.atk ?? 20;
       let targetDef = (target.stats.def ?? 5) + (target.buffs.guard || 0);
+      if (target.isPlayer && defenderPassives.includes('tactical_command') && (target.commandStacks || 0) > 0) {
+        targetDef += target.commandStacks * 4;
+      }
 
       // Hexbound Soul Siphon DEF shred
       if (passives.includes('soul_siphon') && target.corruptionStacks > 0) {
@@ -1356,12 +1501,16 @@ window.GameCombat = (function() {
         targetDef = Math.round(targetDef * 0.5);
       }
       // Crippling Venom DEF shred
-      if (attacker.isPlayer && passives.includes('crippling_venom') && (target.isPoisoned || target.isRooted)) {
-        targetDef = Math.max(0, targetDef - 5);
+      if (attacker.isPlayer && (passives.includes('crippling_neurotoxin') || passives.includes('crippling_venom')) && (target.isPoisoned || target.isRooted)) {
+        targetDef = Math.max(0, targetDef - 6);
       }
       // Killzone Focus DEF bypass
       if (attacker.isPlayer && passives.includes('killzone_focus') && targetDist >= 3) {
         targetDef = Math.max(0, targetDef - 5);
+      }
+      // Skill ignoreDefPct (e.g. Aimed Headshot / Glacial Spike)
+      if (skill.ignoreDefPct) {
+        targetDef = Math.max(0, Math.round(targetDef * (1 - skill.ignoreDefPct)));
       }
 
       let rawDmg = AbyssBalance.damage(baseAtk, mult, targetDef);
@@ -1412,12 +1561,34 @@ window.GameCombat = (function() {
         this.logCombat(`${target.name} memantulkan ${reflectDmg} DMG berkat Duri Kinetis!`, 'shield');
       }
 
-      // Elite Affix: Vampiric (enemy heals 30% of damage dealt)
-      if (!attacker.isPlayer && attacker.isElite && attacker.eliteMod && attacker.eliteMod.id === 'vampiric') {
-        const vHeal = Math.max(4, Math.round(rawDmg * 0.30));
+      // Elite Affix: Vampiric or Monster Lifesteal (e.g. Vampire Knight)
+      const enemyLifeSteal = (!attacker.isPlayer && attacker.isElite && attacker.eliteMod && attacker.eliteMod.id === 'vampiric') ? 0.30 : (!attacker.isPlayer && attacker.stats && attacker.stats.lifeSteal ? attacker.stats.lifeSteal : 0);
+      if (enemyLifeSteal > 0 && actualDamage > 0) {
+        const vHeal = Math.max(4, Math.round(actualDamage * enemyLifeSteal));
         attacker.hp = Math.min(attacker.maxHp, attacker.hp + vHeal);
         this.showFloatingText(attacker, `+${vHeal} HP Lifesteal`, 0xef4444);
         this.logCombat(`${attacker.name} menghisap ${vHeal} HP darah pahlawan!`, 'blood');
+      }
+
+      // Monster Poison Chance (e.g. Cave Spider)
+      if (!attacker.isPlayer && target.isPlayer && attacker.stats && attacker.stats.poisonChance && Math.random() < attacker.stats.poisonChance) {
+        target.isPoisoned = true;
+        target.poisonTurns = Math.max(target.poisonTurns || 0, 2);
+        target.poisonDmg = 8;
+        this.showFloatingText(target, 'TERKENA BISA RACUN!', 0x10b981);
+        this.logCombat(`${attacker.name} menyuntikkan bisa racun ke tubuh pahlawan!`, 'flask');
+      }
+
+      // Boss Skill Special Effects (Drain Adrenaline, Slow, Root, Heal)
+      if (!attacker.isPlayer && target.isPlayer) {
+        if (skill.drainAdrenaline) {
+          target.adrenaline = Math.max(0, (target.adrenaline || 0) - skill.drainAdrenaline);
+          this.showFloatingText(target, `-${skill.drainAdrenaline}% Adrenaline`, 0xa855f7);
+        }
+        if (skill.heal && attacker.hp > 0) {
+          attacker.hp = Math.min(attacker.maxHp, attacker.hp + skill.heal);
+          this.showFloatingText(attacker, `+${skill.heal} HP`, 0x22c55e);
+        }
       }
 
       // Elite Affix: Corrupting (enemy inflicts corruption DoT)
@@ -1477,6 +1648,43 @@ window.GameCombat = (function() {
       if (skill.guardGain) {
         attacker.buffs.guard = (attacker.buffs.guard || 0) + skill.guardGain;
         this.showFloatingText(attacker, `+${skill.guardGain} DEF Guard`, 0x38bdf8);
+      }
+      if (skill.dodgeBuff) {
+        attacker.buffs.dodge = Math.min(0.65, (attacker.buffs.dodge || 0) + skill.dodgeBuff);
+        this.showFloatingText(attacker, `+${Math.round(skill.dodgeBuff * 100)}% Dodge`, 0x22c55e);
+      }
+      if (skill.riposteGain) {
+        attacker.riposteTokens = Math.min(3, (attacker.riposteTokens || 0) + skill.riposteGain);
+        this.showFloatingText(attacker, `+${skill.riposteGain} Riposte (${attacker.riposteTokens}/3)`, 0x38bdf8);
+      }
+      if (skill.healPercent && attacker.hp > 0) {
+        const hAmt = Math.round(attacker.maxHp * skill.healPercent);
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + hAmt);
+        this.showFloatingText(attacker, `+${hAmt} HP Pulih`, 0x22c55e);
+        GameAudio.playHeal();
+      }
+
+      // Pushback Mechanic (e.g. Shield Slam, Arrow Cyclone)
+      const tryPushUnit = (u) => {
+        if (!skill.pushBack || !u || u.hp <= 0) return;
+        const pDx = Math.sign(u.gx - attacker.gx);
+        const pDz = Math.sign(u.gz - attacker.gz);
+        if (pDx === 0 && pDz === 0) return;
+        const destGx = u.gx + pDx * skill.pushBack;
+        const destGz = u.gz + pDz * skill.pushBack;
+        if (this.dungeon.isWalkable(destGx, destGz) && !this.combatants.some(c => c.hp > 0 && c.gx === destGx && c.gz === destGz)) {
+          u.gx = destGx;
+          u.gz = destGz;
+          const wPos = this.dungeon.gridToWorld(destGx, destGz);
+          if (u.model) u.model.position.set(wPos.x, 0, wPos.z);
+          this.showFloatingText(u, 'TERDORONG!', 0x38bdf8);
+        } else {
+          u.poise = Math.max(0, u.poise - 10);
+          this.showFloatingText(u, '-10 Poise (Bentur Dinding)', 0xf97316);
+        }
+      };
+      if (skill.pushBack && target && target.hp > 0) {
+        tryPushUnit(target);
       }
 
       // Boon: Gema Kritis Fajar (Shockwave to nearby enemies on critical hit)
@@ -1665,21 +1873,37 @@ window.GameCombat = (function() {
         }
       }
 
-      // AoE Splash Damage (e.g. Solar Arrow Rain, Fireball)
-      if ((skill.type === 'aoe' || skill.area) && target) {
+      // AoE Splash Damage (e.g. Solar Arrow Rain, Fireball, Frost Nova surround)
+      if ((skill.type === 'aoe' || skill.type === 'surround' || skill.area) && target) {
         const radius = skill.area || 1;
+        const centerX = skill.type === 'surround' ? attacker.gx : target.gx;
+        const centerZ = skill.type === 'surround' ? attacker.gz : target.gz;
         this.combatants.forEach(c => {
           if (!c.isPlayer && c !== target && c.hp > 0) {
-            const dx = Math.abs(c.gx - target.gx);
-            const dz = Math.abs(c.gz - target.gz);
+            const dx = Math.abs(c.gx - centerX);
+            const dz = Math.abs(c.gz - centerZ);
             if (dx <= radius && dz <= radius) {
               const splashDmg = this.dealHealthDamage(c,Math.max(1, Math.round(rawDmg * 0.75)));
               const splashPoise = Math.max(1, Math.round(poiseDmg * 0.75));
               c.poise = Math.max(0, c.poise - splashPoise);
-              this.showFloatingText(c, `-${splashDmg} Hujan Panah`, 0xf97316);
+              if (skill.burnDuration) {
+                c.isBurning = true;
+                c.burnTurns = Math.max(c.burnTurns || 0, skill.burnDuration);
+                c.burnDmg = Math.max(c.burnDmg || 0, 14);
+              }
+              if (skill.slowEffect) {
+                c.slowTurns = Math.max(c.slowTurns || 0, 2);
+              }
+              if (skill.rootTurns) {
+                c.isRooted = true;
+                c.rootTurns = (c.rootTurns || 0) + skill.rootTurns;
+              }
+              if (skill.pushBack) {
+                tryPushUnit(c);
+              }
+              this.showFloatingText(c, `-${splashDmg} Area`, 0xf97316);
               this.flashModel(c.model, 0xf97316, 120);
               if (c.hp <= 0) {
-
                 if (c.model) {
                   GameDeath.begin(this, c);
                 }
@@ -1689,8 +1913,8 @@ window.GameCombat = (function() {
         });
       }
 
-      // Line Piercing (e.g. Piercing Arrow)
-      if (skill.type === 'pierce_line' && target) {
+      // Line Piercing (e.g. Piercing Arrow, Solar Supernova, Cataclysm Star)
+      if ((skill.type === 'pierce_line' || skill.type === 'line') && target) {
         const stepX = Math.sign(target.gx - attacker.gx);
         const stepZ = Math.sign(target.gz - attacker.gz);
         if (stepX !== 0 || stepZ !== 0) {
@@ -1801,10 +2025,12 @@ window.GameCombat = (function() {
       }
 
       // Step 1: Check distance to hero and approach if needed
-      const attackRange = enemy.stats.attackRange || 1;
+      const heroPassives = (this.inventory && this.inventory.passives) || [];
+      const hasCripplingRangeCut = (enemy.isPoisoned || enemy.isRooted) && (heroPassives.includes('crippling_neurotoxin') || heroPassives.includes('crippling_venom'));
+      const attackRange = Math.max(1, (enemy.stats.attackRange || 1) - (hasCripplingRangeCut ? 1 : 0));
       let inRange = this.isUnitInRange(enemy, hero, attackRange);
 
-      // Check Root / Snare
+      // Check Root / Snare / Slow
       if (enemy.isRooted && (enemy.rootTurns || 0) > 0) {
         enemy.rootTurns--;
         if (enemy.rootTurns <= 0) enemy.isRooted = false;
@@ -1813,7 +2039,12 @@ window.GameCombat = (function() {
       } else if (!inRange && enemy.ap >= 1) {
         const path = this.dungeon.findPath(enemy.gx, enemy.gz, hero.gx, hero.gz, 8);
         if (path && path.length > 0) {
-          const maxSteps = Math.min(path.length - 1, enemy.ap * 2);
+          let maxSteps = Math.min(path.length - 1, enemy.ap * 2);
+          if ((enemy.slowTurns || 0) > 0) {
+            enemy.slowTurns--;
+            maxSteps = Math.max(1, Math.floor(maxSteps * 0.5));
+            this.showFloatingText(enemy, 'MELAMBAT (-Gerak)', 0x38bdf8);
+          }
           if (maxSteps > 0) {
             const nextStep = path[maxSteps - 1];
             const occupied = this.combatants.some(c => c.hp > 0 && c.gx === nextStep.gx && c.gz === nextStep.gz);
@@ -1836,12 +2067,19 @@ window.GameCombat = (function() {
           let poiseDmg = 14;
           let skillCost = 1;
 
+          let extraProps = {};
           if (enemy.isBoss && enemy.stats.skills && enemy.stats.skills.length > 0) {
             const pick = enemy.stats.skills[Math.floor(Math.random() * enemy.stats.skills.length)];
             skillName = typeof pick === 'string' ? pick : pick.name;
             dmgMult = 1.35;
             poiseDmg = 22;
             skillCost = 2;
+            if (typeof pick === 'object' && pick) {
+              if (pick.drainAdrenaline) extraProps.drainAdrenaline = pick.drainAdrenaline;
+              if (pick.heal) extraProps.heal = pick.heal;
+              if (pick.root) extraProps.rootTurns = pick.root;
+              if (pick.slow) extraProps.slowEffect = true;
+            }
           } else if (enemy.isElite) {
             skillName = `${enemy.eliteMod ? enemy.eliteMod.prefix : ''}Hantaman Brutal`;
             dmgMult = 1.2;
@@ -1855,7 +2093,8 @@ window.GameCombat = (function() {
             name: skillName,
             cost: skillCost,
             dmgMult: dmgMult,
-            poiseDmg: poiseDmg
+            poiseDmg: poiseDmg,
+            ...extraProps
           };
           this.useSkill(enemy, hero, aiSkill);
 
@@ -1994,12 +2233,14 @@ window.GameCombat = (function() {
       const enemyBar = document.getElementById('combatEnemyBar');
       if (enemyBar && enemy) {
         enemyBar.style.display = 'block';
-        if ((enemy.corruptionStacks || 0) > 0 || (enemy.weaknessMarks || 0) > 0 || enemy.isPoisoned || enemy.isRooted) {
+        if ((enemy.corruptionStacks || 0) > 0 || (enemy.weaknessMarks || 0) > 0 || enemy.isPoisoned || enemy.isBurning || enemy.isRooted || (enemy.slowTurns || 0) > 0) {
           const debuffs = [
             enemy.corruptionStacks > 0 ? `☠️ Corruption x${enemy.corruptionStacks}` : '',
             enemy.weaknessMarks > 0 ? `🎯 Mark x${enemy.weaknessMarks}` : '',
             enemy.isPoisoned ? `🧪 Racun (${enemy.poisonTurns}T)` : '',
-            enemy.isRooted ? `⛓️ Terjerat (${enemy.rootTurns}T)` : ''
+            enemy.isBurning ? `🔥 Terbakar (${enemy.burnTurns}T)` : '',
+            enemy.isRooted ? `⛓️ Terjerat (${enemy.rootTurns}T)` : '',
+            (enemy.slowTurns || 0) > 0 ? `❄️ Lambat (${enemy.slowTurns}T)` : ''
           ].filter(Boolean).join(' • ');
           document.getElementById('enemyName').textContent = `${enemy.name} (${debuffs})`;
         } else {
@@ -2022,7 +2263,7 @@ window.GameCombat = (function() {
         const passives = (this.inventory && this.inventory.passives) || [];
 
         if (passives.includes('tactical_command') && (hero.commandStacks || 0) > 0) {
-          badgeHtml = `${GameIcons.svg('crown', 'fantasy-icon icon-xs')} <span>COMMAND x${hero.commandStacks} (+${hero.commandStacks * 5}% DMG)</span>`;
+          badgeHtml = `${GameIcons.svg('crown', 'fantasy-icon icon-xs')} <span>COMMAND x${hero.commandStacks} (+${hero.commandStacks * 5}% DMG & +${hero.commandStacks * 4} DEF)</span>`;
           badgeColor = '#eab308';
         } else if (passives.includes('blood_frenzy') && ((hero.rageStacks || 0) > 0 || hero.hp < hero.maxHp * 0.5)) {
           if (hero.hp < hero.maxHp * 0.5) {
@@ -2051,10 +2292,10 @@ window.GameCombat = (function() {
           badgeHtml = `${GameIcons.svg('target', 'fantasy-icon icon-xs')} <span>DEADEYE (Sniper >= 3P: +25% DMG)</span>`;
           badgeColor = '#eab308';
         } else if (passives.includes('wind_momentum') || passives.includes('twin_shot')) {
-          badgeHtml = `${GameIcons.svg('ranged', 'fantasy-icon icon-xs')} <span>WINDRUNNER (+20% Dodge & 45% Panah Ganda)</span>`;
+          badgeHtml = `${GameIcons.svg('ranged', 'fantasy-icon icon-xs')} <span>WINDRUNNER (+12% Dodge & 45% Panah Ganda)</span>`;
           badgeColor = '#38bdf8';
-        } else if (passives.includes('toxic_tips') || passives.includes('crippling_venom')) {
-          badgeHtml = `${GameIcons.svg('flask', 'fantasy-icon icon-xs')} <span>TRAPMASTER (15 Racun DoT & Jerat Kaki)</span>`;
+        } else if (passives.includes('toxic_arrowheads') || passives.includes('toxic_tips') || passives.includes('crippling_neurotoxin') || passives.includes('crippling_venom')) {
+          badgeHtml = `${GameIcons.svg('flask', 'fantasy-icon icon-xs')} <span>TRAPMASTER (Racun DoT & Jerat Kaki)</span>`;
           badgeColor = '#10b981';
         }
 

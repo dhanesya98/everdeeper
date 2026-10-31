@@ -12,7 +12,7 @@ window.GameCombatGuide=(()=>{
  function bind(manager,turnCamera){combat=manager;aim=turnCamera;target=null;previousTurn=false;}
  function begin(){target=living()[0]||null;focus();previousTurn=false;}
  function cycle(){const all=living();if(!all.length)return;target=all[(all.indexOf(target)+1)%all.length];focus();}
- function attack(){if(!combat?.isPlayerTurn())return false;const hero=combat.combatants.find(c=>c.isPlayer);if(!hero)return false;if(!target||target.hp<=0)target=living()[0];if(!target)return false;const skill=combat.selectedSkill||combat.inventory.getActiveSkills()[0];if(skill.type==='self')return combat.useSkill(hero,hero,skill);focus();return combat.tryAttackOrApproach(hero,target,skill);}
+ function attack(){if(!combat?.isPlayerTurn())return false;const hero=combat.combatants.find(c=>c.isPlayer);if(!hero)return false;if(!target||target.hp<=0)target=living()[0];if(!target)return false;const skill=combat.selectedSkill||combat.inventory.getActiveSkills()[0];if(skill.type==='self'||skill.type==='vault_leap'||skill.type==='teleport_self')return combat.useSkill(hero,hero,skill);focus();return combat.tryAttackOrApproach(hero,target,skill);}
  function single(skill){const hero=combat?.combatants.find(c=>c.isPlayer);if(!hero)return;const all=living().filter(c=>combat.isUnitInRange(hero,c,skill.range||1));if(all.length===1){target=all[0];attack();}}
  mark.onclick=e=>{e.stopPropagation();attack();};arrow.onclick=focus;
  function update(camera,enabled){
